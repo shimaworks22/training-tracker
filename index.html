@@ -1,0 +1,1852 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FITNESS TRACKER｜トレーニング & 体重管理</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Noto+Sans+JP:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg:       #080E14;
+    --bg2:      #0D1720;
+    --bg3:      #111E2A;
+    --border:   #1A3044;
+    --accent:   #00D4FF;
+    --green:    #3DFF8F;
+    --red:      #FF4D6A;
+    --gold:     #FFD166;
+    --text:     #D8EAF5;
+    --muted:    #4A6578;
+    --muted2:   #2A3F52;
+    --font-display: 'Barlow Condensed', sans-serif;
+    --font-body:    'Noto Sans JP', sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    font-size: 14px;
+  }
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* ─── HEADER ─── */
+  .header {
+    background: linear-gradient(180deg, #0B1620 0%, transparent 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 200;
+    backdrop-filter: blur(12px);
+  }
+  .header-logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .logo-icon {
+    width: 38px; height: 38px;
+    background: linear-gradient(135deg, var(--accent), #0080AA);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+  }
+  .logo-text { line-height: 1; }
+  .logo-title {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+    color: var(--accent);
+  }
+  .logo-sub {
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin-top: 1px;
+  }
+  .header-actions { display: flex; gap: 10px; }
+
+  /* ─── NAV ─── */
+  .nav {
+    display: flex;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    overflow-x: auto;
+    gap: 0;
+  }
+  .nav-btn {
+    padding: 13px 22px;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--muted);
+    font-size: 13px;
+    font-family: var(--font-body);
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+    letter-spacing: 0.03em;
+  }
+  .nav-btn:hover { color: var(--text); }
+  .nav-btn.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  /* ─── CONTENT ─── */
+  .content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 28px 24px;
+  }
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* ─── BUTTONS ─── */
+  .btn {
+    border: none;
+    border-radius: 8px;
+    padding: 9px 18px;
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.18s;
+    letter-spacing: 0.02em;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), #008FAA);
+    color: #000;
+  }
+  .btn-primary:hover { opacity: 0.85; transform: translateY(-1px); }
+  .btn-success {
+    background: rgba(61,255,143,0.15);
+    color: var(--green);
+    border: 1px solid rgba(61,255,143,0.3);
+  }
+  .btn-success:hover { background: rgba(61,255,143,0.25); }
+  .btn-danger {
+    background: rgba(255,77,106,0.12);
+    color: var(--red);
+    border: 1px solid rgba(255,77,106,0.25);
+    padding: 5px 12px;
+    font-size: 11px;
+  }
+  .btn-danger:hover { background: rgba(255,77,106,0.22); }
+  .btn-ghost {
+    background: transparent;
+    color: var(--muted);
+    border: none;
+  }
+  .btn-ghost:hover { color: var(--text); }
+  .btn-sm { padding: 5px 12px; font-size: 11px; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
+
+  /* ─── CARDS ─── */
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+  }
+  .card-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    margin-bottom: 14px;
+    font-weight: 600;
+  }
+
+  /* ─── STAT CARDS ─── */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+  .stat-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+  .stat-card.c-accent::before { background: var(--accent); }
+  .stat-card.c-green::before  { background: var(--green); }
+  .stat-card.c-red::before    { background: var(--red); }
+  .stat-card.c-gold::before   { background: var(--gold); }
+  .stat-icon { font-size: 22px; margin-bottom: 8px; }
+  .stat-label { font-size: 10px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; }
+  .stat-value {
+    font-family: var(--font-display);
+    font-size: 32px;
+    font-weight: 800;
+    line-height: 1;
+    margin: 4px 0 2px;
+  }
+  .stat-card.c-accent .stat-value { color: var(--accent); }
+  .stat-card.c-green  .stat-value { color: var(--green); }
+  .stat-card.c-red    .stat-value { color: var(--red); }
+  .stat-card.c-gold   .stat-value { color: var(--gold); }
+  .stat-sub { font-size: 11px; color: var(--muted); }
+
+  /* ─── CHARTS ROW ─── */
+  .charts-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  /* ─── PROGRESS BAR ─── */
+  .prog-wrap { background: var(--bg); border-radius: 4px; height: 7px; overflow: hidden; }
+  .prog-bar  { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
+
+  /* ─── MODAL ─── */
+  .overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.72);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    backdrop-filter: blur(6px);
+    padding: 16px;
+  }
+  .overlay.open { display: flex; }
+  .modal {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    width: 100%;
+    max-width: 480px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 0 60px rgba(0,212,255,0.12);
+    animation: slideUp 0.2s ease;
+  }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .modal-title {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    margin-bottom: 22px;
+    color: var(--accent);
+  }
+  .modal-footer {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 8px;
+  }
+
+  /* ─── FORM ─── */
+  .field { margin-bottom: 14px; }
+  .field label {
+    display: block;
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    margin-bottom: 6px;
+    font-weight: 600;
+  }
+  .field label .req { color: var(--red); margin-left: 3px; }
+  .field input, .field select, .field textarea {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 13px;
+    color: var(--text);
+    font-size: 14px;
+    font-family: var(--font-body);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0,212,255,0.08);
+  }
+  .field textarea { resize: vertical; min-height: 70px; }
+  .field select option { background: var(--bg2); }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  /* ─── CUSTOM DATE PICKER ─── */
+  .datepicker-wrap { position: relative; }
+  .datepicker-input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 40px 10px 13px;
+    color: var(--text);
+    font-size: 14px;
+    font-family: var(--font-body);
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.2s;
+    user-select: none;
+  }
+  .datepicker-input:hover { border-color: var(--muted); }
+  .datepicker-input.active { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,212,255,0.08); }
+  .datepicker-icon {
+    position: absolute;
+    right: 12px; top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    color: var(--muted);
+    font-size: 16px;
+  }
+  .datepicker-cal {
+    position: fixed;
+    z-index: 9999;
+    background: var(--bg3);
+    border: 1px solid var(--accent);
+    border-radius: 12px;
+    padding: 16px;
+    width: 280px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.8), 0 0 20px rgba(0,212,255,0.15);
+    display: none;
+  }
+  .datepicker-cal.open { display: block; animation: calDrop 0.15s ease; }
+  @keyframes calDrop {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .cal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .cal-nav {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.15s;
+  }
+  .cal-nav:hover { border-color: var(--accent); color: var(--accent); }
+  .cal-month-label {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    color: var(--accent);
+    cursor: pointer;
+  }
+  .cal-month-label:hover { opacity: 0.8; }
+  .cal-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    margin-bottom: 6px;
+  }
+  .cal-wd {
+    text-align: center;
+    font-size: 10px;
+    color: var(--muted);
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    padding: 3px 0;
+  }
+  .cal-wd:first-child { color: #FF6B6B; }
+  .cal-wd:last-child  { color: #6BA4FF; }
+  .cal-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+  }
+  .cal-day {
+    text-align: center;
+    padding: 6px 2px;
+    font-size: 13px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.12s;
+    color: var(--text);
+    border: 1px solid transparent;
+  }
+  .cal-day:hover:not(.empty):not(.selected) {
+    background: rgba(0,212,255,0.12);
+    border-color: rgba(0,212,255,0.3);
+  }
+  .cal-day.other-month { color: var(--muted2); }
+  .cal-day.today {
+    color: var(--accent);
+    font-weight: 700;
+    border-color: rgba(0,212,255,0.35);
+  }
+  .cal-day.selected {
+    background: var(--accent);
+    color: #000;
+    font-weight: 700;
+  }
+  .cal-day.empty { cursor: default; }
+  .cal-day:nth-child(7n+1):not(.selected) { color: #FF8585; }
+  .cal-day:nth-child(7n+1).other-month { color: #7A4444; }
+  .cal-day:nth-child(7n):not(.selected) { color: #85A8FF; }
+  .cal-day:nth-child(7n).other-month { color: #3A4A7A; }
+  .cal-day.selected { color: #000 !important; }
+
+  /* year/month select panel */
+  .cal-ym-panel {
+    display: none;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .cal-ym-panel.open { display: grid; }
+  .cal-ym-select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 8px;
+    color: var(--text);
+    font-size: 13px;
+    font-family: var(--font-body);
+    outline: none;
+    cursor: pointer;
+    width: 100%;
+  }
+  .cal-ym-select:focus { border-color: var(--accent); }
+
+  /* ─── LIST ITEMS ─── */
+  .list { display: flex; flex-direction: column; gap: 10px; }
+  .list-item {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    border-left: 3px solid var(--accent);
+    animation: fadeIn 0.3s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: translateX(0); } }
+  .list-item-icon { font-size: 26px; flex-shrink: 0; }
+  .list-item-body { flex: 1; min-width: 0; }
+  .list-item-title { font-weight: 600; color: var(--text); margin-bottom: 3px; }
+  .list-item-meta { font-size: 12px; color: var(--muted); }
+  .list-item-actions { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+
+  /* ─── BADGES ─── */
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    background: rgba(0,212,255,0.15);
+    color: var(--accent);
+    border: 1px solid rgba(0,212,255,0.3);
+  }
+
+  /* ─── USER GRID ─── */
+  .user-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
+  }
+  .user-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    border-top: 3px solid var(--accent);
+    animation: fadeIn 0.3s ease;
+  }
+  .user-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 14px;
+  }
+  .user-name { font-size: 17px; font-weight: 700; color: var(--text); }
+  .user-sub  { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .user-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+  .user-stat {
+    background: var(--bg);
+    border-radius: 8px;
+    padding: 10px;
+    text-align: center;
+  }
+  .user-stat-val {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--accent);
+  }
+  .user-stat-label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 1px; }
+
+  /* ─── FILTER BAR ─── */
+  .filter-bar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .filter-bar select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    color: var(--text);
+    font-size: 13px;
+    font-family: var(--font-body);
+    outline: none;
+    cursor: pointer;
+  }
+  .filter-bar select:focus { border-color: var(--accent); }
+
+  /* ─── SECTION HEADER ─── */
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .section-heading {
+    font-family: var(--font-display);
+    font-size: 26px;
+    font-weight: 900;
+    letter-spacing: 0.06em;
+    color: var(--text);
+  }
+
+  /* ─── WEIGHT BIG NUM ─── */
+  .weight-big {
+    font-family: var(--font-display);
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--green);
+  }
+
+  /* ─── EMPTY STATE ─── */
+  .empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+  }
+  .empty-icon { font-size: 52px; margin-bottom: 14px; }
+  .empty-text { font-size: 15px; }
+
+  /* ─── TYPE BARS ─── */
+  .type-bar-wrap { display: flex; flex-direction: column; gap: 9px; }
+  .type-bar-row { display: flex; align-items: center; gap: 10px; }
+  .type-bar-label { font-size: 12px; color: var(--muted); width: 110px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .type-bar-track { flex: 1; background: var(--bg); border-radius: 4px; height: 7px; overflow: hidden; }
+  .type-bar-fill  { height: 100%; border-radius: 4px; }
+  .type-bar-count { font-size: 13px; font-weight: 700; color: var(--text); width: 20px; text-align: right; }
+
+  /* ─── USER WEIGHT CARDS ─── */
+  .weight-user-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+  }
+  .weight-user-card {
+    background: var(--bg);
+    border-radius: 10px;
+    padding: 14px;
+    border-left: 3px solid var(--accent);
+  }
+  .weight-user-name { font-weight: 700; color: var(--text); margin-bottom: 8px; font-size: 14px; }
+
+  /* ─── DIFF TAG ─── */
+  .diff-pos { color: var(--red); font-weight: 700; }
+  .diff-neg { color: var(--green); font-weight: 700; }
+  .diff-zero { color: var(--green); font-weight: 700; }
+
+  /* ─── TOAST ─── */
+  .toast {
+    position: fixed;
+    bottom: 24px; left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--bg3);
+    border: 1px solid var(--green);
+    color: var(--green);
+    padding: 11px 22px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    z-index: 2000;
+    transition: transform 0.3s ease;
+    white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 600px) {
+    .content { padding: 16px; }
+    .header  { padding: 12px 16px; }
+    .nav     { padding: 0 12px; }
+    .nav-btn { padding: 11px 14px; font-size: 12px; }
+    .stats-grid { grid-template-columns: 1fr 1fr; }
+    .modal  { padding: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="header-logo">
+    <div class="logo-icon">🏆</div>
+    <div class="logo-text">
+      <div class="logo-title">FITNESS TRACKER</div>
+      <div class="logo-sub">トレーニング & 体重管理</div>
+    </div>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-primary" id="btnAddTraining" disabled>💪 記録</button>
+    <button class="btn btn-success" id="btnAddWeight" disabled>⚖️ 体重</button>
+  </div>
+</header>
+
+<!-- NAV -->
+<nav class="nav">
+  <button class="nav-btn active" data-tab="dashboard">📊 ダッシュボード</button>
+  <button class="nav-btn" data-tab="users">👥 ユーザー</button>
+  <button class="nav-btn" data-tab="trainings">💪 トレーニング</button>
+  <button class="nav-btn" data-tab="weights">⚖️ 体重</button>
+</nav>
+
+<div class="content">
+
+  <!-- ══════════════════ DASHBOARD ══════════════════ -->
+  <section id="sec-dashboard" class="section active">
+    <div class="stats-grid" id="statsGrid"></div>
+    <div class="charts-row">
+      <div class="card" id="chartTrendWrap">
+        <div class="card-title">📈 月別トレーニング推移</div>
+        <canvas id="chartTrend" height="140"></canvas>
+        <div id="chartTrendEmpty" class="empty" style="display:none; padding:30px 10px;">
+          <div>データがありません</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">🎯 種別内訳</div>
+        <div class="type-bar-wrap" id="typeBars">
+          <div class="empty" style="padding:20px 10px; color:var(--muted);">データがありません</div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">⚖️ ユーザー別 体重進捗</div>
+      <div class="weight-user-grid" id="weightUserGrid">
+        <div class="empty" style="padding:20px; color:var(--muted);">ユーザーを登録してください</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════ USERS ══════════════════ -->
+  <section id="sec-users" class="section">
+    <div class="section-header">
+      <span class="section-heading">ユーザー管理</span>
+      <button class="btn btn-primary" onclick="openModal('modalUser')">+ ユーザー追加</button>
+    </div>
+    <div id="userGrid" class="user-grid"></div>
+  </section>
+
+  <!-- ══════════════════ TRAININGS ══════════════════ -->
+  <section id="sec-trainings" class="section">
+    <div class="section-header">
+      <span class="section-heading">トレーニング記録</span>
+    </div>
+    <div class="filter-bar">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <select id="filterTrainUser" onchange="renderTrainings()">
+          <option value="all">👥 全員</option>
+        </select>
+        <select id="filterTrainType" onchange="renderTrainings()">
+          <option value="all">🏃 全種別</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" id="btnAddTraining2" disabled onclick="openModal('modalTraining')">+ 記録追加</button>
+    </div>
+    <div id="trainingList" class="list"></div>
+  </section>
+
+  <!-- ══════════════════ WEIGHTS ══════════════════ -->
+  <section id="sec-weights" class="section">
+    <div class="section-header">
+      <span class="section-heading">体重記録</span>
+    </div>
+    <div class="filter-bar">
+      <select id="filterWeightUser" onchange="renderWeights()">
+        <option value="all">👥 全員</option>
+      </select>
+      <button class="btn btn-success" id="btnAddWeight2" disabled onclick="openModal('modalWeight')">+ 記録追加</button>
+    </div>
+    <div id="weightChartWrap" class="card" style="margin-bottom:20px; display:none;">
+      <div class="card-title" id="weightChartTitle">体重推移</div>
+      <canvas id="chartWeight" height="160"></canvas>
+    </div>
+    <div id="weightList" class="list"></div>
+  </section>
+
+</div><!-- /content -->
+
+<!-- ══════════════ MODALS ══════════════ -->
+
+<!-- User Modal -->
+<div class="overlay" id="modalUser" onclick="overlayClose(event, 'modalUser')">
+  <div class="modal">
+    <div class="modal-title">👤 ユーザー登録</div>
+    <div class="field">
+      <label>名前 <span class="req">*</span></label>
+      <input type="text" id="u_name" placeholder="例：田中 太郎">
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>身長 (cm)</label>
+        <input type="number" id="u_height" placeholder="170">
+      </div>
+      <div class="field">
+        <label>目標体重 (kg)</label>
+        <input type="number" id="u_target" placeholder="65.0" step="0.1">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modalUser')">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveUser()">登録</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit User Modal -->
+<div class="overlay" id="modalEditUser" onclick="overlayClose(event, 'modalEditUser')">
+  <div class="modal">
+    <div class="modal-title" style="color:var(--gold);">✏️ ユーザー編集</div>
+    <input type="hidden" id="eu_id">
+    <div class="field">
+      <label>名前 <span class="req">*</span></label>
+      <input type="text" id="eu_name">
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>身長 (cm)</label>
+        <input type="number" id="eu_height">
+      </div>
+      <div class="field">
+        <label>目標体重 (kg)</label>
+        <input type="number" id="eu_target" step="0.1">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modalEditUser')">キャンセル</button>
+      <button class="btn btn-primary" onclick="updateUser()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Training Modal -->
+<div class="overlay" id="modalTraining" onclick="overlayClose(event, 'modalTraining')">
+  <div class="modal">
+    <div class="modal-title">💪 トレーニング記録</div>
+    <div class="field">
+      <label>ユーザー <span class="req">*</span></label>
+      <select id="t_user"></select>
+    </div>
+    <div class="field">
+      <label>種別 <span class="req">*</span></label>
+      <select id="t_type"></select>
+    </div>
+    <div class="field">
+      <label>場所・施設名</label>
+      <input type="text" id="t_location" placeholder="例：ゴールドジム渋谷、代々木公園">
+    </div>
+    <div class="field">
+      <label>住所・エリア</label>
+      <input type="text" id="t_address" placeholder="例：東京都渋谷区">
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>日付 <span class="req">*</span></label>
+        <div class="datepicker-wrap" id="dp_t_wrap">
+          <div class="datepicker-input" id="dp_t_display" onclick="dpToggle('dp_t')">日付を選択</div>
+          <span class="datepicker-icon">📅</span>
+          <input type="hidden" id="t_date">
+          <!-- calendar portal: dp_t -->
+        </div>
+      </div>
+      <div class="field">
+        <label>時間 (分)</label>
+        <input type="number" id="t_duration" placeholder="60">
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>消費カロリー (kcal)</label>
+        <input type="number" id="t_cal" placeholder="300">
+      </div>
+      <div class="field">
+        <label>トレーニング後体重 (kg)</label>
+        <input type="number" id="t_weight" placeholder="70.5" step="0.1">
+      </div>
+    </div>
+    <div class="field">
+      <label>メモ</label>
+      <textarea id="t_memo" placeholder="今日のトレーニングメモ…"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modalTraining')">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveTraining()">記録する</button>
+    </div>
+  </div>
+</div>
+
+<!-- Weight Modal -->
+<div class="overlay" id="modalWeight" onclick="overlayClose(event, 'modalWeight')">
+  <div class="modal">
+    <div class="modal-title" style="color:var(--green);">⚖️ 体重記録</div>
+    <div class="field">
+      <label>ユーザー <span class="req">*</span></label>
+      <select id="w_user"></select>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>体重 (kg) <span class="req">*</span></label>
+        <input type="number" id="w_weight" placeholder="70.5" step="0.1">
+      </div>
+      <div class="field">
+        <label>体脂肪率 (%)</label>
+        <input type="number" id="w_fat" placeholder="18.5" step="0.1">
+      </div>
+    </div>
+    <div class="field">
+      <label>計測日 <span class="req">*</span></label>
+      <div class="datepicker-wrap" id="dp_w_wrap">
+        <div class="datepicker-input" id="dp_w_display" onclick="dpToggle('dp_w')">日付を選択</div>
+        <span class="datepicker-icon">📅</span>
+        <input type="hidden" id="w_date">
+        <!-- calendar portal: dp_w -->
+      </div>
+    </div>
+    <div class="field">
+      <label>メモ</label>
+      <input type="text" id="w_memo" placeholder="体調など">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modalWeight')">キャンセル</button>
+      <button class="btn btn-success" onclick="saveWeight()">記録する</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ════════════════════════════════════════
+//  DATA
+// ════════════════════════════════════════
+const TRAINING_TYPES = [
+  { id:'gym',        icon:'🏋️', label:'ジム' },
+  { id:'run_out',    icon:'🏃', label:'屋外ランニング' },
+  { id:'run_in',     icon:'🏃‍♀️', label:'屋内ランニング' },
+  { id:'swim',       icon:'🏊', label:'水泳' },
+  { id:'cycle',      icon:'🚴', label:'自転車' },
+  { id:'walk',       icon:'🚶', label:'徒歩' },
+  { id:'yoga',       icon:'🧘', label:'ヨガ' },
+  { id:'tennis',     icon:'🎾', label:'テニス' },
+  { id:'soccer',     icon:'⚽', label:'サッカー' },
+  { id:'other',      icon:'⚡', label:'その他' },
+];
+
+const USER_COLORS = ['#00D4FF','#FF4D6A','#3DFF8F','#FFD166','#FF69B4','#B48EFF','#FF9F43','#26C6DA'];
+
+let db = load();
+
+function load() {
+  try {
+    const raw = localStorage.getItem('ft-data');
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  return { users:[], trainings:[], weights:[] };
+}
+function save() {
+  localStorage.setItem('ft-data', JSON.stringify(db));
+}
+
+// ════════════════════════════════════════
+//  HELPERS
+// ════════════════════════════════════════
+const uid  = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
+const now  = () => new Date().toISOString();
+const today = () => new Date().toISOString().split('T')[0];
+const esc  = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const getUser  = id => db.users.find(u => u.id === id);
+const getType  = id => TRAINING_TYPES.find(t => t.id === id);
+const userColor = id => { const i = db.users.findIndex(u => u.id === id); return USER_COLORS[i % USER_COLORS.length]; };
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+function overlayClose(e, id) {
+  if (e.target.classList.contains('overlay')) closeModal(id);
+}
+
+// ════════════════════════════════════════
+//  TABS
+// ════════════════════════════════════════
+document.querySelectorAll('.nav-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const tab = btn.dataset.tab;
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.getElementById('sec-' + tab).classList.add('active');
+    if (tab === 'dashboard') renderDashboard();
+  });
+});
+
+// ════════════════════════════════════════
+//  USERS
+// ════════════════════════════════════════
+function saveUser() {
+  const name = document.getElementById('u_name').value.trim();
+  if (!name) { alert('名前を入力してください'); return; }
+  db.users.push({
+    id: uid(), name,
+    height: parseFloat(document.getElementById('u_height').value) || null,
+    targetWeight: parseFloat(document.getElementById('u_target').value) || null,
+    createdAt: now()
+  });
+  save(); closeModal('modalUser');
+  ['u_name','u_height','u_target'].forEach(id => document.getElementById(id).value = '');
+  updateAll(); showToast('✅ ユーザーを登録しました');
+}
+
+function openEditUser(id) {
+  const u = getUser(id); if (!u) return;
+  document.getElementById('eu_id').value = id;
+  document.getElementById('eu_name').value = u.name;
+  document.getElementById('eu_height').value = u.height || '';
+  document.getElementById('eu_target').value = u.targetWeight || '';
+  openModal('modalEditUser');
+}
+
+function updateUser() {
+  const id = document.getElementById('eu_id').value;
+  const name = document.getElementById('eu_name').value.trim();
+  if (!name) { alert('名前を入力してください'); return; }
+  const u = getUser(id); if (!u) return;
+  u.name = name;
+  u.height = parseFloat(document.getElementById('eu_height').value) || null;
+  u.targetWeight = parseFloat(document.getElementById('eu_target').value) || null;
+  save(); closeModal('modalEditUser');
+  updateAll(); showToast('✅ ユーザー情報を更新しました');
+}
+
+function deleteUser(id) {
+  if (!confirm('このユーザーと関連データを削除しますか？')) return;
+  db.users = db.users.filter(u => u.id !== id);
+  db.trainings = db.trainings.filter(t => t.userId !== id);
+  db.weights = db.weights.filter(w => w.userId !== id);
+  save(); updateAll(); showToast('🗑️ ユーザーを削除しました');
+}
+
+function renderUsers() {
+  const grid = document.getElementById('userGrid');
+  if (!db.users.length) {
+    grid.innerHTML = `<div class="empty"><div class="empty-icon">👤</div><div class="empty-text">ユーザーを追加してください</div></div>`;
+    return;
+  }
+  grid.innerHTML = db.users.map((u,i) => {
+    const color = USER_COLORS[i % USER_COLORS.length];
+    const uts = db.trainings.filter(t => t.userId === u.id).length;
+    const uws = db.weights.filter(w => w.userId === u.id).sort((a,b) => b.date.localeCompare(a.date));
+    const latest = uws[0];
+    const diff = latest && u.targetWeight ? (latest.weight - u.targetWeight).toFixed(1) : null;
+    const prog = latest && u.targetWeight
+      ? Math.min(100, Math.max(5, (u.targetWeight / latest.weight) * 100)).toFixed(0)
+      : 0;
+    return `<div class="user-card" style="border-top-color:${color}">
+      <div class="user-card-header">
+        <div>
+          <div class="user-name">${esc(u.name)}</div>
+          ${u.height ? `<div class="user-sub">身長 ${u.height} cm</div>` : ''}
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-sm" style="background:${color}22;color:${color};border:1px solid ${color}44;" onclick="openEditUser('${u.id}')">編集</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteUser('${u.id}')">削除</button>
+        </div>
+      </div>
+      <div class="user-stats">
+        <div class="user-stat">
+          <div class="user-stat-val" style="color:${color}">${uts}</div>
+          <div class="user-stat-label">トレーニング</div>
+        </div>
+        <div class="user-stat">
+          <div class="user-stat-val" style="color:var(--green)">${latest ? latest.weight + 'kg' : '--'}</div>
+          <div class="user-stat-label">現在体重</div>
+        </div>
+      </div>
+      ${u.targetWeight ? `
+      <div style="margin-bottom:6px;">
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:5px;">
+          <span>目標 ${u.targetWeight} kg</span>
+          ${diff !== null ? `<span class="${parseFloat(diff)<=0?'diff-neg':'diff-pos'}">${parseFloat(diff)>0?'+':''}${diff} kg</span>` : ''}
+        </div>
+        <div class="prog-wrap"><div class="prog-bar" style="width:${prog}%;background:${color}"></div></div>
+      </div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+// ════════════════════════════════════════
+//  TRAININGS
+// ════════════════════════════════════════
+function populateTrainingSelects() {
+  const sel  = document.getElementById('t_user');
+  const fil  = document.getElementById('filterTrainUser');
+  const opts = db.users.map(u => `<option value="${u.id}">${esc(u.name)}</option>`).join('');
+  sel.innerHTML  = opts;
+  fil.innerHTML  = `<option value="all">👥 全員</option>` + opts;
+  document.getElementById('t_type').innerHTML = TRAINING_TYPES.map(t =>
+    `<option value="${t.id}">${t.icon} ${t.label}</option>`).join('');
+  document.getElementById('filterTrainType').innerHTML =
+    `<option value="all">🏃 全種別</option>` +
+    TRAINING_TYPES.map(t => `<option value="${t.id}">${t.icon} ${t.label}</option>`).join('');
+}
+
+function saveTraining() {
+  const userId = document.getElementById('t_user').value;
+  const type   = document.getElementById('t_type').value;
+  const date   = document.getElementById('t_date').value;
+  if (!userId || !type || !date) { alert('必須項目を入力してください'); return; }
+  const postWeight = parseFloat(document.getElementById('t_weight').value) || null;
+  db.trainings.push({
+    id: uid(), userId, type, date,
+    location: document.getElementById('t_location').value.trim(),
+    address:  document.getElementById('t_address').value.trim(),
+    duration: parseFloat(document.getElementById('t_duration').value) || null,
+    cal:      parseFloat(document.getElementById('t_cal').value) || null,
+    postWeight,
+    memo:     document.getElementById('t_memo').value.trim(),
+    createdAt: now()
+  });
+  // トレーニング後体重が入力されていれば体重記録にも自動追加
+  if (postWeight) {
+    db.weights.push({
+      id: uid(), userId, weight: postWeight, date,
+      fat: null, memo: 'トレーニング後計測（自動）',
+      createdAt: now()
+    });
+  }
+  save(); closeModal('modalTraining');
+  ['t_location','t_address','t_duration','t_cal','t_weight','t_memo'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('t_date').value = '';
+  document.getElementById('dp_t_display').textContent = '日付を選択';
+  dpInit('dp_t', today());
+  updateAll();
+  showToast(postWeight ? '✅ トレーニングと体重を記録しました' : '✅ トレーニングを記録しました');
+}
+
+function deleteTraining(id) {
+  if (!confirm('この記録を削除しますか？')) return;
+  db.trainings = db.trainings.filter(t => t.id !== id);
+  save(); renderTrainings(); renderDashboard(); showToast('🗑️ 削除しました');
+}
+
+function openEditTraining(t) {
+  document.getElementById('et_id').value       = t.id;
+  document.getElementById('et_location').value = t.location || '';
+  document.getElementById('et_address').value  = t.address  || '';
+  document.getElementById('et_duration').value = t.duration || '';
+  document.getElementById('et_weight').value   = t.postWeight || '';
+  document.getElementById('et_cal').value      = t.cal      || '';
+  document.getElementById('et_memo').value     = t.memo     || '';
+  const u = getUser(t.userId);
+  document.getElementById('et_username').textContent = u ? u.name : '不明';
+  // 種別セレクト
+  document.getElementById('et_type').innerHTML = TRAINING_TYPES.map(tp =>
+    `<option value="${tp.id}"${tp.id === t.type ? ' selected' : ''}>${tp.icon} ${tp.label}</option>`).join('');
+  dpInit('dp_et', t.date || today());
+  openModal('modalEditTraining');
+}
+
+function updateTraining() {
+  const id   = document.getElementById('et_id').value;
+  const type = document.getElementById('et_type').value;
+  const date = document.getElementById('et_date').value;
+  if (!type || !date) { alert('種別と日付は必須です'); return; }
+  const t = db.trainings.find(x => x.id === id);
+  if (!t) return;
+  const newPostWeight = parseFloat(document.getElementById('et_weight').value) || null;
+  const oldPostWeight = t.postWeight || null;
+  t.type       = type;
+  t.date       = date;
+  t.location   = document.getElementById('et_location').value.trim();
+  t.address    = document.getElementById('et_address').value.trim();
+  t.duration   = parseFloat(document.getElementById('et_duration').value) || null;
+  t.cal        = parseFloat(document.getElementById('et_cal').value)      || null;
+  t.postWeight = newPostWeight;
+  t.memo       = document.getElementById('et_memo').value.trim();
+  // 体重記録の同期（自動追加分のみ更新）
+  const autoMemo = 'トレーニング後計測（自動）';
+  if (newPostWeight && !oldPostWeight) {
+    // 新たに体重が入力された → 追加
+    db.weights.push({ id: uid(), userId: t.userId, weight: newPostWeight, date: t.date, fat: null, memo: autoMemo, createdAt: now() });
+  } else if (!newPostWeight && oldPostWeight) {
+    // 体重が削除された → 同日・同ユーザーの自動記録を削除
+    db.weights = db.weights.filter(w => !(w.userId === t.userId && w.date === t.date && w.memo === autoMemo && w.weight === oldPostWeight));
+  } else if (newPostWeight && oldPostWeight && newPostWeight !== oldPostWeight) {
+    // 体重が変更された → 同日・同ユーザーの自動記録を更新
+    const existing = db.weights.find(w => w.userId === t.userId && w.date === t.date && w.memo === autoMemo && w.weight === oldPostWeight);
+    if (existing) existing.weight = newPostWeight;
+  }
+  save(); closeModal('modalEditTraining');
+  updateAll(); showToast('✅ トレーニングを更新しました');
+}
+
+function renderTrainings() {
+  const list    = document.getElementById('trainingList');
+  const fuv     = document.getElementById('filterTrainUser').value;
+  const ftv     = document.getElementById('filterTrainType').value;
+  const filtered = db.trainings
+    .filter(t => fuv === 'all' || t.userId === fuv)
+    .filter(t => ftv === 'all' || t.type === ftv)
+    .sort((a,b) => b.date.localeCompare(a.date));
+
+  if (!db.users.length) {
+    list.innerHTML = `<div class="empty"><div class="empty-icon">👥</div><div class="empty-text">先にユーザーを登録してください</div></div>`; return;
+  }
+  if (!filtered.length) {
+    list.innerHTML = `<div class="empty"><div class="empty-icon">💪</div><div class="empty-text">トレーニング記録がありません</div></div>`; return;
+  }
+  list.innerHTML = '';
+  filtered.forEach(t => {
+    const u  = getUser(t.userId);
+    const tp = getType(t.type);
+    const col = userColor(t.userId);
+    const dateDisp = t.date ? t.date.replace(/-/g, '/') : '---';
+    const div = document.createElement('div');
+    div.className = 'list-item';
+    div.style.cssText = `border-left-color:${col}`;
+    div.innerHTML = `
+      <div class="list-item-icon">${tp?.icon||'⚡'}</div>
+      <div class="list-item-body">
+        <div class="list-item-title">
+          ${esc(tp?.label||t.type)}
+          <span class="badge" style="background:${col}22;color:${col};border-color:${col}44;margin-left:8px;">${esc(u?.name||'?')}</span>
+        </div>
+        <div class="list-item-meta">
+          📅 ${dateDisp}
+          ${t.location ? ` &nbsp;📍 ${esc(t.location)}` : ''}
+          ${t.address  ? ` &nbsp;🗺️ ${esc(t.address)}`  : ''}
+        </div>
+        ${t.memo ? `<div class="list-item-meta" style="margin-top:3px;">💬 ${esc(t.memo)}</div>` : ''}
+      </div>
+      <div class="list-item-actions">
+        ${t.duration ? `<div style="text-align:center"><div style="font-family:var(--font-display);font-size:20px;color:var(--accent);font-weight:800">${t.duration}</div><div style="font-size:9px;color:var(--muted)">分</div></div>` : ''}
+        ${t.cal ? `<div style="text-align:center"><div style="font-family:var(--font-display);font-size:20px;color:var(--gold);font-weight:800">${t.cal}</div><div style="font-size:9px;color:var(--muted)">kcal</div></div>` : ''}
+        ${t.postWeight ? `<div style="text-align:center"><div style="font-family:var(--font-display);font-size:20px;color:var(--green);font-weight:800">${t.postWeight}</div><div style="font-size:9px;color:var(--muted)">kg</div></div>` : ''}
+        <button class="btn btn-sm" style="background:rgba(255,209,102,0.15);color:#FFD166;border:1px solid rgba(255,209,102,0.3);" data-edit-train>編集</button>
+        <button class="btn btn-danger btn-sm" data-del-train>削除</button>
+      </div>
+    `;
+    div.querySelector('[data-del-train]').addEventListener('click', () => deleteTraining(t.id));
+    div.querySelector('[data-edit-train]').addEventListener('click', () => openEditTraining(t));
+    list.appendChild(div);
+  });
+}
+
+// ════════════════════════════════════════
+//  WEIGHTS
+// ════════════════════════════════════════
+let weightChart = null;
+
+function populateWeightSelects() {
+  const sel  = document.getElementById('w_user');
+  const fil  = document.getElementById('filterWeightUser');
+  const opts = db.users.map(u => `<option value="${u.id}">${esc(u.name)}</option>`).join('');
+  sel.innerHTML = opts;
+  fil.innerHTML = `<option value="all">👥 全員</option>` + opts;
+}
+
+function saveWeight() {
+  const userId = document.getElementById('w_user').value;
+  const weight = parseFloat(document.getElementById('w_weight').value);
+  const date   = document.getElementById('w_date').value;
+  if (!userId || !weight || !date) { alert('必須項目を入力してください'); return; }
+  db.weights.push({
+    id: uid(), userId, weight, date,
+    fat:  parseFloat(document.getElementById('w_fat').value) || null,
+    memo: document.getElementById('w_memo').value.trim(),
+    createdAt: now()
+  });
+  save(); closeModal('modalWeight');
+  ['w_weight','w_fat','w_memo'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('w_date').value = '';
+  document.getElementById('dp_w_display').textContent = '日付を選択';
+  dpInit('dp_w', today());
+  updateAll(); showToast('✅ 体重を記録しました');
+}
+
+function deleteWeight(id) {
+  if (!confirm('この記録を削除しますか？')) return;
+  db.weights = db.weights.filter(w => w.id !== id);
+  save(); renderWeights(); renderDashboard(); showToast('🗑️ 削除しました');
+}
+
+function openEditWeight(w) {
+  document.getElementById('ew_id').value     = w.id;
+  document.getElementById('ew_weight').value = w.weight;
+  document.getElementById('ew_fat').value    = w.fat || '';
+  document.getElementById('ew_memo').value   = w.memo || '';
+  const u = getUser(w.userId);
+  document.getElementById('ew_username').textContent = u ? u.name : '不明';
+  dpInit('dp_ew', w.date || today());
+  openModal('modalEditWeight');
+}
+
+function updateWeight() {
+  const id     = document.getElementById('ew_id').value;
+  const weight = parseFloat(document.getElementById('ew_weight').value);
+  const date   = document.getElementById('ew_date').value;
+  if (!weight || !date) { alert('体重と日付は必須です'); return; }
+  const w = db.weights.find(x => x.id === id);
+  if (!w) return;
+  w.weight = weight;
+  w.date   = date;
+  w.fat    = parseFloat(document.getElementById('ew_fat').value) || null;
+  w.memo   = document.getElementById('ew_memo').value.trim();
+  save(); closeModal('modalEditWeight');
+  updateAll(); showToast('✅ 体重記録を更新しました');
+}
+
+function renderWeights() {
+  const list    = document.getElementById('weightList');
+  const chartWrap = document.getElementById('weightChartWrap');
+  const fuv     = document.getElementById('filterWeightUser').value;
+  const filtered = db.weights
+    .filter(w => fuv === 'all' || w.userId === fuv)
+    .sort((a,b) => b.date.localeCompare(a.date));
+
+  // Chart
+  if (fuv !== 'all') {
+    const u = getUser(fuv);
+    const sorted = db.weights.filter(w => w.userId === fuv).sort((a,b) => a.date.localeCompare(b.date));
+    if (sorted.length > 1) {
+      chartWrap.style.display = 'block';
+      document.getElementById('weightChartTitle').textContent = (u?.name||'') + ' の体重推移';
+      if (weightChart) weightChart.destroy();
+      const ctx = document.getElementById('chartWeight').getContext('2d');
+      const datasets = [{
+        label: '体重(kg)',
+        data: sorted.map(w => w.weight),
+        borderColor: '#3DFF8F', backgroundColor: 'rgba(61,255,143,0.1)',
+        tension: 0.4, pointBackgroundColor: '#3DFF8F', pointRadius: 4
+      }];
+      if (sorted.some(w => w.fat)) {
+        datasets.push({
+          label: '体脂肪率(%)',
+          data: sorted.map(w => w.fat),
+          borderColor: '#FF4D6A', backgroundColor: 'rgba(255,77,106,0.08)',
+          tension: 0.4, pointBackgroundColor: '#FF4D6A', pointRadius: 4, yAxisID: 'y2'
+        });
+      }
+      if (u?.targetWeight) {
+        datasets.push({
+          label: `目標 ${u.targetWeight}kg`,
+          data: sorted.map(() => u.targetWeight),
+          borderColor: '#FFD166', borderDash: [6,3],
+          pointRadius: 0, backgroundColor: 'transparent'
+        });
+      }
+      weightChart = new Chart(ctx, {
+        type: 'line',
+        data: { labels: sorted.map(w => w.date.slice(5)), datasets },
+        options: {
+          responsive: true,
+          plugins: { legend: { labels: { color: '#4A6578', font: { size: 11 } } } },
+          scales: {
+            x: { ticks: { color: '#4A6578', font:{size:10} }, grid: { color: '#1A3044' } },
+            y: { ticks: { color: '#4A6578', font:{size:10} }, grid: { color: '#1A3044' } },
+            ...(sorted.some(w=>w.fat) ? { y2: { position:'right', ticks:{color:'#FF4D6A',font:{size:10}}, grid:{display:false} } } : {})
+          }
+        }
+      });
+    } else { chartWrap.style.display = 'none'; }
+  } else { chartWrap.style.display = 'none'; }
+
+  if (!db.users.length) {
+    list.innerHTML = `<div class="empty"><div class="empty-icon">👥</div><div class="empty-text">先にユーザーを登録してください</div></div>`; return;
+  }
+  if (!filtered.length) {
+    list.innerHTML = `<div class="empty"><div class="empty-icon">⚖️</div><div class="empty-text">体重記録がありません</div></div>`; return;
+  }
+  list.innerHTML = '';
+  filtered.forEach(w => {
+    const u   = getUser(w.userId);
+    const col = userColor(w.userId);
+    const diff = u?.targetWeight ? (w.weight - u.targetWeight).toFixed(1) : null;
+    const dateDisp = w.date ? w.date.replace(/-/g, '/') : '---';
+    const div = document.createElement('div');
+    div.className = 'list-item';
+    div.style.cssText = `border-left-color:${col}`;
+    div.innerHTML = `
+      <div class="list-item-icon">⚖️</div>
+      <div class="list-item-body">
+        <div class="list-item-title">
+          <span class="badge" style="background:${col}22;color:${col};border-color:${col}44;">${esc(u?.name||'?')}</span>
+          <span style="margin-left:8px;font-size:12px;color:var(--muted)">📅 ${dateDisp}</span>
+        </div>
+        <div class="list-item-meta">
+          ${w.fat ? `体脂肪率: ${w.fat}%` : ''}
+          ${w.memo ? ` &nbsp;💬 ${esc(w.memo)}` : ''}
+        </div>
+      </div>
+      <div class="list-item-actions" style="gap:10px;">
+        <div style="text-align:right;">
+          <div class="weight-big">${w.weight} kg</div>
+          ${diff !== null ? `<div style="font-size:12px;" class="${parseFloat(diff)<=0?'diff-neg':'diff-pos'}">目標まで ${parseFloat(diff)>0?'+':''}${diff} kg</div>` : ''}
+        </div>
+        <button class="btn btn-sm" style="background:rgba(255,209,102,0.15);color:#FFD166;border:1px solid rgba(255,209,102,0.3);" data-edit-weight="${w.id}">編集</button>
+        <button class="btn btn-danger btn-sm" data-del-weight="${w.id}">削除</button>
+      </div>
+    `;
+    // 削除ボタン
+    div.querySelector('[data-del-weight]').addEventListener('click', () => deleteWeight(w.id));
+    // 編集ボタン
+    div.querySelector('[data-edit-weight]').addEventListener('click', () => openEditWeight(w));
+    list.appendChild(div);
+  });
+}
+
+// ════════════════════════════════════════
+//  DASHBOARD
+// ════════════════════════════════════════
+let trendChart = null;
+
+function renderDashboard() {
+  const thisMonth = new Date().toISOString().slice(0,7);
+  const monthTs   = db.trainings.filter(t => t.date.startsWith(thisMonth)).length;
+  const totalMin  = db.trainings.reduce((s,t) => s + (t.duration||0), 0);
+  const totalKm   = db.trainings.reduce((s,t) => s + (t.distance||0), 0);
+
+  // Stats
+  document.getElementById('statsGrid').innerHTML = `
+    <div class="stat-card c-accent"><div class="stat-icon">👥</div><div class="stat-label">ユーザー数</div><div class="stat-value">${db.users.length}</div></div>
+    <div class="stat-card c-red"><div class="stat-icon">💪</div><div class="stat-label">総トレーニング</div><div class="stat-value">${db.trainings.length}</div></div>
+    <div class="stat-card c-green"><div class="stat-icon">📅</div><div class="stat-label">今月</div><div class="stat-value">${monthTs}</div><div class="stat-sub">回</div></div>
+    <div class="stat-card c-gold"><div class="stat-icon">⏱️</div><div class="stat-label">総時間</div><div class="stat-value">${totalMin ? (totalMin/60).toFixed(1) : 0}</div><div class="stat-sub">時間</div></div>
+  `;
+
+  // Monthly Trend Chart（ユーザー別積み上げ棒グラフ）
+  const months = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(); d.setMonth(d.getMonth() - i);
+    months.push({ m: d.toISOString().slice(0, 7), lbl: `${d.getMonth() + 1}月` });
+  }
+
+  // ユーザーごとに月別カウント
+  const userDatasets = db.users.map((u, idx) => {
+    const data = months.map(({ m }) =>
+      db.trainings.filter(t => t.userId === u.id && t.date.slice(0, 7) === m).length
+    );
+    return { label: u.name, data, backgroundColor: USER_COLORS[idx % USER_COLORS.length] + 'CC',
+             borderColor: USER_COLORS[idx % USER_COLORS.length], borderWidth: 1, borderRadius: 3 };
+  });
+
+  const hasData = userDatasets.some(ds => ds.data.some(v => v > 0));
+  if (hasData) {
+    document.getElementById('chartTrendEmpty').style.display = 'none';
+    if (trendChart) trendChart.destroy();
+    const ctx = document.getElementById('chartTrend').getContext('2d');
+    // Y軸の最大値（整数の天井）
+    const maxVal = Math.max(...userDatasets.flatMap(ds => ds.data), 1);
+    trendChart = new Chart(ctx, {
+      type: 'bar',
+      data: { labels: months.map(m => m.lbl), datasets: userDatasets },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: {
+            display: db.users.length > 1,
+            labels: { color: '#8899A6', font: { size: 11 }, boxWidth: 12 }
+          }
+        },
+        scales: {
+          x: {
+            stacked: true,
+            ticks: { color: '#4A6578', font: { size: 11 } },
+            grid: { display: false }
+          },
+          y: {
+            stacked: true,
+            beginAtZero: true,
+            max: maxVal + 1,
+            ticks: {
+              color: '#4A6578',
+              font: { size: 11 },
+              stepSize: 1,
+              callback: v => Number.isInteger(v) ? v : null
+            },
+            grid: { color: '#1A3044' }
+          }
+        }
+      }
+    });
+  } else {
+    document.getElementById('chartTrendEmpty').style.display = 'block';
+  }
+
+  // Type Bars
+  const typeCnt = {};
+  TRAINING_TYPES.forEach(t => typeCnt[t.id] = 0);
+  db.trainings.forEach(t => { typeCnt[t.type] = (typeCnt[t.type]||0) + 1; });
+  const sorted = TRAINING_TYPES.map(t => ({...t, cnt: typeCnt[t.id]||0})).filter(t=>t.cnt>0).sort((a,b)=>b.cnt-a.cnt);
+  const maxCnt = sorted.length ? Math.max(...sorted.map(t=>t.cnt)) : 1;
+  const colors = ['#00D4FF','#FF4D6A','#3DFF8F','#FFD166','#FF69B4','#B48EFF'];
+  document.getElementById('typeBars').innerHTML = sorted.length
+    ? sorted.slice(0,8).map((t,i) => `
+        <div class="type-bar-row">
+          <div class="type-bar-label">${t.icon} ${t.label}</div>
+          <div class="type-bar-track"><div class="type-bar-fill" style="width:${(t.cnt/maxCnt*100).toFixed(0)}%;background:${colors[i%colors.length]};"></div></div>
+          <div class="type-bar-count">${t.cnt}</div>
+        </div>`).join('')
+    : `<div style="color:var(--muted);font-size:13px;padding:10px 0;">データがありません</div>`;
+
+  // Weight User Grid
+  const wug = document.getElementById('weightUserGrid');
+  if (!db.users.length) {
+    wug.innerHTML = `<div style="color:var(--muted);font-size:13px;padding:10px;">ユーザーを登録してください</div>`; return;
+  }
+  wug.innerHTML = db.users.map((u,i) => {
+    const color = USER_COLORS[i % USER_COLORS.length];
+    const uws = db.weights.filter(w => w.userId === u.id).sort((a,b) => b.date.localeCompare(a.date));
+    const latest = uws[0];
+    const diff = latest && u.targetWeight ? (latest.weight - u.targetWeight).toFixed(1) : null;
+    const prog = latest && u.targetWeight
+      ? Math.min(100, Math.max(5, (u.targetWeight / latest.weight) * 100)).toFixed(0)
+      : 0;
+    return `<div class="weight-user-card" style="border-left-color:${color}">
+      <div class="weight-user-name">${esc(u.name)}</div>
+      ${latest ? `
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+          <span style="font-size:11px;color:var(--muted)">最新</span>
+          <span style="font-family:var(--font-display);font-size:20px;color:${color};font-weight:800">${latest.weight} kg</span>
+        </div>
+        ${u.targetWeight ? `
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+          <span style="font-size:11px;color:var(--muted)">目標 ${u.targetWeight}kg</span>
+          ${diff!==null ? `<span style="font-size:12px;" class="${parseFloat(diff)<=0?'diff-neg':'diff-pos'}">${parseFloat(diff)>0?'+':''}${diff}kg</span>` : ''}
+        </div>
+        <div class="prog-wrap"><div class="prog-bar" style="width:${prog}%;background:${color}"></div></div>
+        ` : ''}
+        <div style="font-size:10px;color:var(--muted);margin-top:6px;">${latest.date}</div>
+      ` : `<div style="color:var(--muted);font-size:12px;">体重データなし</div>`}
+    </div>`;
+  }).join('');
+}
+
+// ════════════════════════════════════════
+//  UPDATE ALL
+// ════════════════════════════════════════
+function updateAll() {
+  const hasUsers = db.users.length > 0;
+  // header buttons
+  document.getElementById('btnAddTraining').disabled  = !hasUsers;
+  document.getElementById('btnAddWeight').disabled    = !hasUsers;
+  document.getElementById('btnAddTraining2').disabled = !hasUsers;
+  document.getElementById('btnAddWeight2').disabled   = !hasUsers;
+
+  populateTrainingSelects();
+  populateWeightSelects();
+  renderUsers();
+  renderTrainings();
+  renderWeights();
+  renderDashboard();
+}
+
+// ════════════════════════════════════════
+//  CUSTOM DATE PICKER  (fixed-position popover)
+// ════════════════════════════════════════
+const dpState  = {};
+const WEEKDAYS  = ['日','月','火','水','木','金','土'];
+const MONTHS_JP = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+
+// hidden-input id lookup
+const DP_HIDDEN = { 'dp_t': 't_date', 'dp_w': 'w_date', 'dp_ew': 'ew_date', 'dp_et': 'et_date' };
+
+function dpInit(id, defaultDate) {
+  const d = defaultDate ? new Date(defaultDate + 'T00:00:00') : new Date();
+  dpState[id] = { year: d.getFullYear(), month: d.getMonth(), ymOpen: false };
+  // update display label & hidden value without closing
+  const hiddenId = DP_HIDDEN[id];
+  if (hiddenId && defaultDate) {
+    document.getElementById(hiddenId).value = defaultDate;
+    const [y,m,day] = defaultDate.split('-').map(Number);
+    document.getElementById(id + '_display').textContent = y + '年' + m + '月' + day + '日';
+  }
+}
+
+function dpToggle(id) {
+  const cal  = document.getElementById(id + '_cal');
+  const disp = document.getElementById(id + '_display');
+  const isOpen = cal.classList.contains('open');
+
+  dpCloseAll();
+
+  if (!isOpen) {
+    dpRender(id);          // build HTML first so size is real
+    cal.classList.add('open');
+    disp.classList.add('active');
+    dpPosition(id);        // then position
+  }
+}
+
+function dpPosition(id) {
+  const cal  = document.getElementById(id + '_cal');
+  const disp = document.getElementById(id + '_display');
+  const rect = disp.getBoundingClientRect();
+  const CAL_W = 280, CAL_H = 300;
+
+  let left = rect.left;
+  let top  = rect.bottom + 6;
+
+  if (left + CAL_W > window.innerWidth - 8)  left = window.innerWidth - CAL_W - 8;
+  if (left < 8) left = 8;
+  if (top + CAL_H > window.innerHeight - 8)  top = rect.top - CAL_H - 6;
+  if (top < 8) top = 8;
+
+  cal.style.left = left + 'px';
+  cal.style.top  = top  + 'px';
+}
+
+function dpCloseAll() {
+  document.querySelectorAll('.datepicker-cal.open').forEach(c => c.classList.remove('open'));
+  document.querySelectorAll('.datepicker-input.active').forEach(d => d.classList.remove('active'));
+}
+
+function dpClose(id) {
+  document.getElementById(id + '_cal').classList.remove('open');
+  document.getElementById(id + '_display').classList.remove('active');
+}
+
+function dpSetValue(id, dateStr) {
+  const hiddenId = DP_HIDDEN[id];
+  if (hiddenId) document.getElementById(hiddenId).value = dateStr;
+
+  const [y,m,d] = dateStr.split('-').map(Number);
+  document.getElementById(id + '_display').textContent = y + '年' + m + '月' + d + '日';
+
+  dpState[id] = dpState[id] || {};
+  dpState[id].year  = y;
+  dpState[id].month = m - 1;
+  dpState[id].ymOpen = false;
+  dpClose(id);
+}
+
+function dpNav(id, delta) {
+  const s = dpState[id];
+  s.month += delta;
+  if (s.month > 11) { s.month = 0;  s.year++; }
+  if (s.month < 0)  { s.month = 11; s.year--; }
+  dpRender(id);
+}
+
+function dpToggleYM(id) {
+  dpState[id].ymOpen = !dpState[id].ymOpen;
+  dpRender(id);
+}
+
+function dpRender(id) {
+  const cal = document.getElementById(id + '_cal');
+  if (!cal) return;
+  if (!dpState[id]) dpState[id] = { year: new Date().getFullYear(), month: new Date().getMonth(), ymOpen: false };
+  const s = dpState[id];
+  const hiddenId = DP_HIDDEN[id];
+  const currentVal = hiddenId ? document.getElementById(hiddenId).value : '';
+  const todayStr = today();
+
+  const firstDay    = new Date(s.year, s.month, 1).getDay();
+  const daysInMonth = new Date(s.year, s.month + 1, 0).getDate();
+  const daysInPrev  = new Date(s.year, s.month, 0).getDate();
+
+  const curYear   = new Date().getFullYear();
+  const yearOpts  = Array.from({length: 10}, (_, i) => curYear - 5 + i)
+    .map(y => `<option value="${y}"${y === s.year ? ' selected' : ''}>${y}年</option>`).join('');
+  const monthOpts = MONTHS_JP.map((lbl, i) =>
+    `<option value="${i}"${i === s.month ? ' selected' : ''}>${lbl}</option>`).join('');
+
+  const pad = n => String(n).padStart(2, '0');
+  const mkDate = (y, m, d) => `${y}-${pad(m)}-${pad(d)}`;
+
+  let cells = '';
+
+  // 前月の末尾
+  const prevM = s.month === 0 ? 12 : s.month;
+  const prevY = s.month === 0 ? s.year - 1 : s.year;
+  for (let i = firstDay - 1; i >= 0; i--) {
+    const d   = daysInPrev - i;
+    const str = mkDate(prevY, prevM, d);
+    cells += `<div class="cal-day other-month" data-date="${str}">${d}</div>`;
+  }
+
+  // 当月
+  for (let d = 1; d <= daysInMonth; d++) {
+    const str = mkDate(s.year, s.month + 1, d);
+    const cls = (str === todayStr ? ' today' : '') + (str === currentVal ? ' selected' : '');
+    cells += `<div class="cal-day${cls}" data-date="${str}">${d}</div>`;
+  }
+
+  // 次月の先頭
+  const nextM  = s.month === 11 ? 1 : s.month + 2;
+  const nextY  = s.month === 11 ? s.year + 1 : s.year;
+  const total  = firstDay + daysInMonth;
+  const fill   = total % 7 === 0 ? 0 : 7 - (total % 7);
+  for (let d = 1; d <= fill; d++) {
+    const str = mkDate(nextY, nextM, d);
+    cells += `<div class="cal-day other-month" data-date="${str}">${d}</div>`;
+  }
+
+  const ymPanel = s.ymOpen
+    ? `<div class="cal-ym-panel open">
+        <select class="cal-ym-select" data-dp="${id}" data-type="year">${yearOpts}</select>
+        <select class="cal-ym-select" data-dp="${id}" data-type="month">${monthOpts}</select>
+       </div>`
+    : `<div class="cal-ym-panel"></div>`;
+
+  cal.innerHTML = `
+    <div class="cal-header">
+      <button class="cal-nav" data-dp="${id}" data-delta="-1">&#8249;</button>
+      <div class="cal-month-label" data-dp="${id}" data-action="toggleYM">${s.year}年 ${MONTHS_JP[s.month]}</div>
+      <button class="cal-nav" data-dp="${id}" data-delta="1">&#8250;</button>
+    </div>
+    ${ymPanel}
+    <div class="cal-weekdays">${WEEKDAYS.map(w => `<div class="cal-wd">${w}</div>`).join('')}</div>
+    <div class="cal-days">${cells}</div>
+  `;
+}
+
+// ── カレンダー内クリックをイベントデリゲーションで処理 ──
+document.addEventListener('click', function(e) {
+  const cal = e.target.closest('.datepicker-cal');
+  const wrap = e.target.closest('.datepicker-wrap');
+
+  // カレンダー外・入力欄外クリック → 全閉
+  if (!wrap && !cal) {
+    dpCloseAll();
+    return;
+  }
+
+  // カレンダー内のクリック処理
+  if (cal) {
+    e.stopPropagation();
+    const id = cal.id.replace('_cal', '');
+
+    // 日付セル
+    const dayEl = e.target.closest('.cal-day');
+    if (dayEl && dayEl.dataset.date) {
+      dpSetValue(id, dayEl.dataset.date);
+      return;
+    }
+
+    // 前後月ナビ
+    const navBtn = e.target.closest('.cal-nav[data-delta]');
+    if (navBtn) {
+      dpNav(id, parseInt(navBtn.dataset.delta));
+      return;
+    }
+
+    // 年月ラベル（トグル）
+    const lbl = e.target.closest('.cal-month-label[data-action="toggleYM"]');
+    if (lbl) {
+      dpToggleYM(id);
+      return;
+    }
+
+    // 年・月セレクト
+    const sel = e.target.closest('.cal-ym-select');
+    if (sel) {
+      if (sel.dataset.type === 'year')  dpState[id].year  = parseInt(sel.value);
+      if (sel.dataset.type === 'month') dpState[id].month = parseInt(sel.value);
+      dpRender(id);
+      return;
+    }
+  }
+});
+
+// ════════════════════════════════════════
+//  HEADER BUTTONS
+// ════════════════════════════════════════
+document.getElementById('btnAddTraining').onclick = () => {
+  dpInit('dp_t', today());
+  openModal('modalTraining');
+};
+document.getElementById('btnAddWeight').onclick = () => {
+  dpInit('dp_w', today());
+  openModal('modalWeight');
+};
+
+// Set date defaults on modal open (from nav buttons)
+document.querySelectorAll('[onclick*="modalTraining"]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    dpInit('dp_t', today());
+  });
+});
+document.querySelectorAll('[onclick*="modalWeight"]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    dpInit('dp_w', today());
+  });
+});
+
+// ════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════
+dpInit('dp_t', today());
+dpInit('dp_w', today());
+updateAll();
+</script>
+
+
+<!-- Edit Weight Modal -->
+<div class="overlay" id="modalEditWeight" onclick="overlayClose(event, 'modalEditWeight')">
+  <div class="modal">
+    <div class="modal-title" style="color:var(--gold);">✏️ 体重記録 編集</div>
+    <input type="hidden" id="ew_id">
+    <div class="field">
+      <label>ユーザー</label>
+      <div id="ew_username" style="padding:10px 13px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--muted);"></div>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>体重 (kg) <span class="req">*</span></label>
+        <input type="number" id="ew_weight" placeholder="70.5" step="0.1">
+      </div>
+      <div class="field">
+        <label>体脂肪率 (%)</label>
+        <input type="number" id="ew_fat" placeholder="18.5" step="0.1">
+      </div>
+    </div>
+    <div class="field">
+      <label>計測日 <span class="req">*</span></label>
+      <div class="datepicker-wrap" id="dp_ew_wrap">
+        <div class="datepicker-input" id="dp_ew_display" onclick="dpToggle('dp_ew')">日付を選択</div>
+        <span class="datepicker-icon">📅</span>
+        <input type="hidden" id="ew_date">
+      </div>
+    </div>
+    <div class="field">
+      <label>メモ</label>
+      <input type="text" id="ew_memo" placeholder="体調など">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modalEditWeight')">キャンセル</button>
+      <button class="btn btn-primary" onclick="updateWeight()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Training Modal -->
+<div class="overlay" id="modalEditTraining" onclick="overlayClose(event, 'modalEditTraining')">
+  <div class="modal">
+    <div class="modal-title" style="color:var(--gold);">✏️ トレーニング 編集</div>
+    <input type="hidden" id="et_id">
+    <div class="field">
+      <label>ユーザー</label>
+      <div id="et_username" style="padding:10px 13px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--muted);"></div>
+    </div>
+    <div class="field">
+      <label>種別 <span class="req">*</span></label>
+      <select id="et_type"></select>
+    </div>
+    <div class="field">
+      <label>場所・施設名</label>
+      <input type="text" id="et_location" placeholder="例：ゴールドジム渋谷">
+    </div>
+    <div class="field">
+      <label>住所・エリア</label>
+      <input type="text" id="et_address" placeholder="例：東京都渋谷区">
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>日付 <span class="req">*</span></label>
+        <div class="datepicker-wrap" id="dp_et_wrap">
+          <div class="datepicker-input" id="dp_et_display" onclick="dpToggle('dp_et')">日付を選択</div>
+          <span class="datepicker-icon">📅</span>
+          <input type="hidden" id="et_date">
+        </div>
+      </div>
+      <div class="field">
+        <label>時間 (分)</label>
+        <input type="number" id="et_duration" placeholder="60">
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>消費カロリー (kcal)</label>
+        <input type="number" id="et_cal" placeholder="300">
+      </div>
+      <div class="field">
+        <label>トレーニング後体重 (kg)</label>
+        <input type="number" id="et_weight" placeholder="70.5" step="0.1">
+      </div>
+    </div>
+    <div class="field">
+      <label>メモ</label>
+      <textarea id="et_memo" placeholder="メモ…"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modalEditTraining')">キャンセル</button>
+      <button class="btn btn-primary" onclick="updateTraining()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── カレンダーポータル（body直下、z-index最上位） ── -->
+<div class="datepicker-cal" id="dp_t_cal"></div>
+<div class="datepicker-cal" id="dp_w_cal"></div>
+<div class="datepicker-cal" id="dp_ew_cal"></div>
+<div class="datepicker-cal" id="dp_et_cal"></div>
+
+</body>
+</html>
