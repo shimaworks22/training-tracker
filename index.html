@@ -3,9 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FITNESS TRACKER｜トレーニング & 体重管理</title>
+<title>TRAINING TRACKER｜トレーニング & 体重管理</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Noto+Sans+JP:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <style>
   :root {
     --bg:       #080E14;
@@ -21,6 +23,10 @@
     --muted2:   #2A3F52;
     --font-display: 'Barlow Condensed', sans-serif;
     --font-body:    'Noto Sans JP', sans-serif;
+    --blue-bright: #00D4FF;
+    --blue-mid:    #0EA5E9;
+    --blue-deep:   #0284C7;
+    --blue-dark:   #0369A1;
   }
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -76,34 +82,116 @@
   }
   .header-actions { display: flex; gap: 10px; }
 
-  /* ─── NAV ─── */
-  .nav {
-    display: flex;
-    background: var(--bg2);
-    border-bottom: 1px solid var(--border);
-    padding: 0 24px;
-    overflow-x: auto;
-    gap: 0;
-  }
-  .nav-btn {
-    padding: 13px 22px;
+  /* ─── HAMBURGER ─── */
+  .hamburger-btn {
+    width: 40px; height: 40px;
     background: none;
-    border: none;
-    border-bottom: 2px solid transparent;
-    color: var(--muted);
-    font-size: 13px;
-    font-family: var(--font-body);
-    font-weight: 600;
+    border: 1px solid var(--border);
+    border-radius: 8px;
     cursor: pointer;
-    white-space: nowrap;
-    transition: all 0.2s;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 5px;
+    padding: 8px;
+    transition: border-color 0.2s;
+  }
+  .hamburger-btn:hover { border-color: var(--accent); }
+  .hamburger-btn span {
+    display: block; width: 18px; height: 2px;
+    background: var(--text);
+    border-radius: 2px;
+    transition: all 0.25s;
+  }
+  .hamburger-btn.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  .hamburger-btn.open span:nth-child(2) { opacity: 0; transform: scaleX(0); }
+  .hamburger-btn.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+  /* ─── DRAWER ─── */
+  .drawer-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 300;
+    backdrop-filter: blur(2px);
+  }
+  .drawer-overlay.open { display: block; }
+  .drawer {
+    position: fixed; top: 0; left: 0;
+    width: 260px; height: 100vh;
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    z-index: 400;
+    transform: translateX(-100%);
+    transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
+    display: flex; flex-direction: column;
+    overflow-y: auto;
+  }
+  .drawer.open { transform: translateX(0); }
+  .drawer-header {
+    padding: 20px 20px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .drawer-logo-icon {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--accent), #0080AA);
+    border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+  }
+  .drawer-logo-title {
+    font-family: var(--font-display);
+    font-size: 17px; font-weight: 900;
+    letter-spacing: 0.1em; color: var(--accent);
+    line-height: 1;
+  }
+  .drawer-logo-sub {
+    font-size: 9px; color: var(--muted);
+    letter-spacing: 0.15em; margin-top: 2px;
+  }
+  .drawer-nav {
+    flex: 1; padding: 12px 0;
+  }
+  .drawer-nav-btn {
+    display: flex; align-items: center; gap: 14px;
+    width: 100%; padding: 14px 20px;
+    background: none; border: none;
+    color: var(--muted);
+    font-family: var(--font-body); font-size: 14px; font-weight: 600;
+    cursor: pointer; text-align: left;
     letter-spacing: 0.03em;
+    transition: all 0.15s;
+    border-left: 3px solid transparent;
   }
-  .nav-btn:hover { color: var(--text); }
-  .nav-btn.active {
+  .drawer-nav-btn:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+  .drawer-nav-btn.active {
     color: var(--accent);
-    border-bottom-color: var(--accent);
+    border-left-color: var(--accent);
+    background: rgba(0,212,255,0.06);
   }
+  .drawer-nav-btn .nav-icon { font-size: 24px; width: 32px; text-align: center; font-weight: 600; }
+  .drawer-footer {
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+    position: sticky;
+    bottom: 0;
+    background: var(--bg2);
+  }
+  .drawer-logout-btn {
+    display: flex; align-items: center; gap: 10px;
+    width: 100%; padding: 12px 14px;
+    background: rgba(255,77,106,0.08);
+    border: 1px solid rgba(255,77,106,0.2);
+    border-radius: 8px; cursor: pointer;
+    color: var(--red); font-family: var(--font-body);
+    font-size: 13px; font-weight: 600;
+    transition: all 0.2s;
+  }
+  .drawer-logout-btn:hover { background: rgba(255,77,106,0.15); }
+
+  /* ─── NAV（旧タブ非表示） ─── */
+  .nav { display: none; }
+  .nav-btn { display: none; }
 
   /* ─── CONTENT ─── */
   .content {
@@ -245,6 +333,35 @@
     overflow-y: auto;
     box-shadow: 0 0 60px rgba(0,212,255,0.12);
     animation: slideUp 0.2s ease;
+  }
+  .memo-row {
+    flex: 0 0 100%;
+    padding: 10px 12px;
+    background: rgba(255,209,102,0.08);
+    border-top: 1px solid rgba(255,209,102,0.2);
+    font-size: 14px;
+    color: var(--text);
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .comment-row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 12px;
+    border-top: 1px solid var(--border);
+  }
+  .comment-form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .comment-item {
+    padding: 8px;
+    background: rgba(0,212,255,0.03);
+    border-radius: 8px;
+    border: 1px solid rgba(0,212,255,0.1);
   }
   @keyframes slideUp {
     from { opacity: 0; transform: translateY(20px); }
@@ -446,13 +563,18 @@
     background: var(--bg2);
     border: 1px solid var(--border);
     border-radius: 10px;
-    padding: 14px 16px;
+    padding: 14px 16px 0;
     display: flex;
     align-items: center;
     gap: 14px;
     border-left: 3px solid var(--accent);
     animation: fadeIn 0.3s ease;
+    flex-wrap: wrap;
   }
+  .list-item > .list-item-icon,
+  .list-item > .list-item-body,
+  .list-item > .list-item-actions { margin-bottom: 14px; }
+  .comment-row { flex: 0 0 calc(100% + 32px); margin: 0 -16px; border-radius: 0 0 10px 10px; }
   @keyframes fadeIn { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: translateX(0); } }
   .list-item-icon { font-size: 26px; flex-shrink: 0; }
   .list-item-body { flex: 1; min-width: 0; }
@@ -621,23 +743,93 @@
 </style>
 </head>
 <body>
+<!-- ══════════════ LOGIN SCREEN ══════════════ -->
+<div id="loginScreen" style="display:flex; min-height:100vh; align-items:center; justify-content:center; padding:24px;">
+  <div style="width:100%; max-width:400px;">
+    <div style="text-align:center; margin-bottom:32px;">
+      <div style="font-size:48px; margin-bottom:12px;">🏋️</div>
+      <div style="font-family:var(--font-display); font-size:32px; font-weight:900; letter-spacing:0.08em; color:var(--accent);">TRAINING TRACKER</div>
+      <div style="font-size:12px; color:var(--muted); margin-top:4px;">トレーニング & 体重管理</div>
+    </div>
+    <div style="background:var(--bg2); border:1px solid var(--border); border-radius:16px; padding:28px; box-shadow:0 0 40px rgba(0,212,255,0.08);">
+      <div style="display:flex; gap:0; margin-bottom:24px; background:var(--bg); border-radius:8px; padding:4px;">
+        <button id="tabLogin" onclick="switchAuthTab('login')" style="flex:1; padding:8px; border:none; border-radius:6px; cursor:pointer; font-family:var(--font-body); font-size:13px; font-weight:600; background:var(--accent); color:#000; transition:all 0.2s;">ログイン</button>
+        <button id="tabSignup" onclick="switchAuthTab('signup')" style="flex:1; padding:8px; border:none; border-radius:6px; cursor:pointer; font-family:var(--font-body); font-size:13px; font-weight:600; background:transparent; color:var(--muted); transition:all 0.2s;">新規登録</button>
+      </div>
+      <div id="authError" style="display:none; background:rgba(255,77,106,0.12); border:1px solid rgba(255,77,106,0.3); border-radius:8px; padding:10px 12px; font-size:12px; color:var(--red); margin-bottom:16px;"></div>
+      <div class="field">
+        <label>サイトID <span class="req">*</span></label>
+        <input type="text" id="authEmail" placeholder="例：myteam@training.com" autocomplete="username">
+      </div>
+      <div class="field">
+        <label>パスワード <span class="req">*</span></label>
+        <input type="password" id="authPassword" placeholder="6文字以上">
+      </div>
+      <button id="authSubmitBtn" onclick="authSubmit()" style="width:100%; padding:12px; background:var(--accent); color:#000; border:none; border-radius:8px; font-family:var(--font-body); font-size:14px; font-weight:700; cursor:pointer; margin-top:8px;">ログイン</button>
+      <div id="authLoading" style="display:none; text-align:center; padding:12px; font-size:13px; color:var(--muted);">⏳ 処理中...</div>
+    </div>
+    <div style="text-align:center; margin-top:16px; font-size:11px; color:var(--muted2);">サイトIDとパスワードを共有してチームで使えます</div>
+  </div>
+</div>
+
+<!-- ══════════════ APP SCREEN ══════════════ -->
+<div id="appScreen" style="display:none;">
+
+
+<!-- DRAWER OVERLAY -->
+<div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+
+<!-- DRAWER -->
+<div class="drawer" id="drawer">
+  <div class="drawer-header">
+    <div class="drawer-logo-icon">🏆</div>
+    <div>
+      <div class="drawer-logo-title">TRAINING TRACKER</div>
+      <div class="drawer-logo-sub">トレーニング & 体重管理</div>
+    </div>
+  </div>
+  <nav class="drawer-nav">
+    <button class="drawer-nav-btn active" data-tab="dashboard" onclick="switchTab(this)">
+      <span class="nav-icon" style="font-size:26px;">◔</span> ダッシュボード
+    </button>
+    <button class="drawer-nav-btn" data-tab="users" onclick="switchTab(this)">
+      <span class="nav-icon" style="font-size:22px;">⚉</span> ユーザー
+    </button>
+    <button class="drawer-nav-btn" data-tab="trainings" onclick="switchTab(this)">
+      <span class="nav-icon">◉</span> トレーニング
+    </button>
+    <button class="drawer-nav-btn" data-tab="weights" onclick="switchTab(this)">
+      <span class="nav-icon">◯</span> 体重
+    </button>
+    <div style="padding: 12px 20px 4px;">
+      <button class="drawer-logout-btn" onclick="signOut()">
+        <span style="font-size:16px;">⎋</span> ログアウト
+      </button>
+    </div>
+  </nav>
+</div>
 
 <!-- HEADER -->
 <header class="header">
-  <div class="header-logo">
-    <div class="logo-icon">🏆</div>
-    <div class="logo-text">
-      <div class="logo-title">FITNESS TRACKER</div>
-      <div class="logo-sub">トレーニング & 体重管理</div>
+  <div style="display:flex; align-items:center; gap:14px;">
+    <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleDrawer()">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="header-logo">
+      <div class="logo-icon">🏆</div>
+      <div class="logo-text">
+        <div class="logo-title">TRAINING TRACKER</div>
+        <div class="logo-sub">トレーニング & 体重管理</div>
+      </div>
     </div>
   </div>
   <div class="header-actions">
     <button class="btn btn-primary" id="btnAddTraining" disabled>💪 記録</button>
-    <button class="btn btn-success" id="btnAddWeight" disabled>⚖️ 体重</button>
+    <button class="btn" style="background:rgba(255,209,102,0.15);color:#FFD166;border:1px solid rgba(255,209,102,0.3);" id="btnAddWeight" disabled>⚖️ 体重</button>
   </div>
 </header>
 
-<!-- NAV -->
+<!-- NAV（旧nav・非表示） -->
 <nav class="nav">
   <button class="nav-btn active" data-tab="dashboard">📊 ダッシュボード</button>
   <button class="nav-btn" data-tab="users">👥 ユーザー</button>
@@ -650,25 +842,66 @@
   <!-- ══════════════════ DASHBOARD ══════════════════ -->
   <section id="sec-dashboard" class="section active">
     <div class="stats-grid" id="statsGrid"></div>
-    <div class="charts-row">
-      <div class="card" id="chartTrendWrap">
-        <div class="card-title">📈 月別トレーニング推移</div>
-        <canvas id="chartTrend" height="140"></canvas>
-        <div id="chartTrendEmpty" class="empty" style="display:none; padding:30px 10px;">
-          <div>データがありません</div>
+
+    <!-- 月セレクター（共通） -->
+    <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+      <select id="dashMonthSelect" onchange="renderDashboard()" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:6px 14px;border-radius:8px;font-family:var(--font-body);font-size:13px;cursor:pointer;"></select>
+    </div>
+
+    <!-- Row1: トレーニング回数 + 消費カロリー -->
+    <div class="dash-row2" style="margin-bottom:20px;">
+      <div class="card">
+        <div class="card-title">💪 月別トレーニング回数</div>
+        <div id="dashTrainBars"><div class="empty" style="padding:16px 0;color:var(--muted);">データがありません</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">🔥 月別消費カロリー</div>
+        <div id="dashCalBars"><div class="empty" style="padding:16px 0;color:var(--muted);">データがありません</div></div>
+      </div>
+    </div>
+
+    <!-- Row2: 体重推移 + 最新トレーニング -->
+    <div class="dash-row2" style="margin-bottom:20px;">
+      <div class="card">
+        <div class="card-title">📉 当月の体重推移</div>
+        <canvas id="dashWeightChart"></canvas>
+        <div id="dashWeightEmpty" class="empty" style="display:none;padding:30px 10px;color:var(--muted);">データがありません</div>
+      </div>
+      <div class="card">
+        <div class="card-title">🏃 最新トレーニング</div>
+        <div id="dashLatestTrainings"><div class="empty" style="padding:16px 0;color:var(--muted);">データがありません</div></div>
+      </div>
+    </div>
+
+    <!-- Row2.5: 年間月別平均体重 -->
+    <div class="card" style="margin-bottom:20px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+        <div class="card-title" style="margin:0;">📊 月別平均体重</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <select id="dashYearlyPeriodSelect" onchange="renderDashboard()" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:6px 12px;border-radius:8px;font-family:var(--font-body);font-size:13px;cursor:pointer;">
+            <option value="12m">直近12ヶ月</option>
+            <option value="all">全期間</option>
+          </select>
+          <select id="dashYearlyUserSelect" onchange="renderDashboard()" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:6px 12px;border-radius:8px;font-family:var(--font-body);font-size:13px;cursor:pointer;"></select>
         </div>
       </div>
+      <canvas id="dashYearlyWeightChart"></canvas>
+      <div id="dashYearlyWeightEmpty" class="empty" style="display:none;padding:30px 10px;color:var(--muted);">データがありません</div>
+    </div>
+
+    <!-- Row3: 種別内訳 + 体重進捗 -->
+    <div class="charts-row">
       <div class="card">
         <div class="card-title">🎯 種別内訳</div>
         <div class="type-bar-wrap" id="typeBars">
-          <div class="empty" style="padding:20px 10px; color:var(--muted);">データがありません</div>
+          <div class="empty" style="padding:20px 10px;color:var(--muted);">データがありません</div>
         </div>
       </div>
-    </div>
-    <div class="card">
-      <div class="card-title">⚖️ ユーザー別 体重進捗</div>
-      <div class="weight-user-grid" id="weightUserGrid">
-        <div class="empty" style="padding:20px; color:var(--muted);">ユーザーを登録してください</div>
+      <div class="card">
+        <div class="card-title">⚖️ ユーザー別 体重進捗</div>
+        <div class="weight-user-grid" id="weightUserGrid">
+          <div class="empty" style="padding:20px;color:var(--muted);">ユーザーを登録してください</div>
+        </div>
       </div>
     </div>
   </section>
@@ -710,7 +943,10 @@
       <select id="filterWeightUser" onchange="renderWeights()">
         <option value="all">👥 全員</option>
       </select>
-      <button class="btn btn-success" id="btnAddWeight2" disabled onclick="openModal('modalWeight')">+ 記録追加</button>
+      <div style="display:flex;gap:10px;">
+        <button class="btn" style="background:rgba(0,212,255,0.12);color:var(--accent);border:1px solid rgba(0,212,255,0.3);" onclick="openModal('modalCsvImport')">📂 CSVインポート</button>
+        <button class="btn" style="background:rgba(255,209,102,0.15);color:#FFD166;border:1px solid rgba(255,209,102,0.3);" id="btnAddWeight2" disabled onclick="openModal('modalWeight')">+ 記録追加</button>
+      </div>
     </div>
     <div id="weightChartWrap" class="card" style="margin-bottom:20px; display:none;">
       <div class="card-title" id="weightChartTitle">体重推移</div>
@@ -727,6 +963,11 @@
 <div class="overlay" id="modalUser" onclick="overlayClose(event, 'modalUser')">
   <div class="modal">
     <div class="modal-title">👤 ユーザー登録</div>
+    <div class="field" style="text-align:center;">
+      <div id="u_icon_preview" onclick="document.getElementById('u_icon_input').click()" style="width:80px;height:80px;border-radius:50%;background:var(--bg3);border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;cursor:pointer;overflow:hidden;font-size:32px;">👤</div>
+      <div style="font-size:11px;color:var(--muted);">タップして写真を選択</div>
+      <input type="file" id="u_icon_input" accept="image/*" style="display:none;" onchange="previewIcon('u_icon_preview', this)">
+    </div>
     <div class="field">
       <label>名前 <span class="req">*</span></label>
       <input type="text" id="u_name" placeholder="例：田中 太郎">
@@ -753,6 +994,11 @@
   <div class="modal">
     <div class="modal-title" style="color:var(--gold);">✏️ ユーザー編集</div>
     <input type="hidden" id="eu_id">
+    <div class="field" style="text-align:center;">
+      <div id="eu_icon_preview" onclick="document.getElementById('eu_icon_input').click()" style="width:80px;height:80px;border-radius:50%;background:var(--bg3);border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;cursor:pointer;overflow:hidden;font-size:32px;">👤</div>
+      <div style="font-size:11px;color:var(--muted);">タップして写真を変更</div>
+      <input type="file" id="eu_icon_input" accept="image/*" style="display:none;" onchange="previewIcon('eu_icon_preview', this)">
+    </div>
     <div class="field">
       <label>名前 <span class="req">*</span></label>
       <input type="text" id="eu_name">
@@ -790,10 +1036,7 @@
       <label>場所・施設名</label>
       <input type="text" id="t_location" placeholder="例：ゴールドジム渋谷、代々木公園">
     </div>
-    <div class="field">
-      <label>住所・エリア</label>
-      <input type="text" id="t_address" placeholder="例：東京都渋谷区">
-    </div>
+
     <div class="row2">
       <div class="field">
         <label>日付 <span class="req">*</span></label>
@@ -815,7 +1058,7 @@
         <input type="number" id="t_cal" placeholder="300">
       </div>
       <div class="field">
-        <label>トレーニング後体重 (kg)</label>
+        <label>体重 (kg)</label>
         <input type="number" id="t_weight" placeholder="70.5" step="0.1">
       </div>
     </div>
@@ -833,7 +1076,7 @@
 <!-- Weight Modal -->
 <div class="overlay" id="modalWeight" onclick="overlayClose(event, 'modalWeight')">
   <div class="modal">
-    <div class="modal-title" style="color:var(--green);">⚖️ 体重記録</div>
+    <div class="modal-title" style="color:var(--gold);">⚖️ 体重記録</div>
     <div class="field">
       <label>ユーザー <span class="req">*</span></label>
       <select id="w_user"></select>
@@ -863,15 +1106,287 @@
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('modalWeight')">キャンセル</button>
-      <button class="btn btn-success" onclick="saveWeight()">記録する</button>
+      <button class="btn" style="background:rgba(255,209,102,0.15);color:#FFD166;border:1px solid rgba(255,209,102,0.3);" onclick="saveWeight()">記録する</button>
     </div>
   </div>
 </div>
+
+
+
+<!-- CSV Import Modal -->
+<div class="overlay" id="modalCsvImport" onclick="overlayClose(event, 'modalCsvImport')">
+  <div class="modal" style="max-width:540px;">
+    <div class="modal-title" style="color:var(--accent);">📂 CSV 体重インポート</div>
+
+    <!-- Step1: ファイル選択 -->
+    <div id="csvStep1">
+      <div class="field">
+        <label>対象ユーザー <span class="req">*</span></label>
+        <select id="csv_user"></select>
+      </div>
+      <div class="field">
+        <label>CSVファイルを選択</label>
+        <div id="csvDropZone" style="border:2px dashed var(--border);border-radius:10px;padding:30px;text-align:center;cursor:pointer;transition:border-color 0.2s;color:var(--muted);">
+          <div style="font-size:32px;margin-bottom:8px;">📄</div>
+          <div style="font-size:13px;">クリックまたはドラッグ＆ドロップ</div>
+          <div style="font-size:11px;margin-top:4px;color:var(--muted2);">.csv ファイル対応（文字コード: UTF-8 / Shift-JIS）</div>
+          <input type="file" id="csvFileInput" accept=".csv" style="display:none;">
+        </div>
+      </div>
+      <div style="background:var(--bg);border-radius:8px;padding:12px;font-size:12px;color:var(--muted);line-height:1.8;">
+        <div style="color:var(--text);font-weight:600;margin-bottom:6px;">📋 対応フォーマット例</div>
+        <div>日付,体重,体脂肪率</div>
+        <div>2026/01/01,70.5,18.2</div>
+        <div style="margin-top:4px;color:var(--muted2);">※ヘッダー行は自動判定。日付は YYYY/MM/DD・YYYY-MM-DD・MM/DD 形式に対応。</div>
+      </div>
+    </div>
+
+    <!-- Step2: 列マッピング確認 -->
+    <div id="csvStep2" style="display:none;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <div style="font-size:13px;color:var(--text);font-weight:600;">列の割り当てを確認してください</div>
+        <div id="csvRowCount" style="font-size:11px;color:var(--muted);"></div>
+      </div>
+      <div class="row2" style="margin-bottom:12px;">
+        <div class="field" style="margin-bottom:0">
+          <label>日付の列</label>
+          <select id="csv_col_date"></select>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>体重 (kg) の列</label>
+          <select id="csv_col_weight"></select>
+        </div>
+      </div>
+      <div class="row2" style="margin-bottom:16px;">
+        <div class="field" style="margin-bottom:0">
+          <label>体脂肪率 (%) の列 <span style="color:var(--muted);font-size:10px;">任意</span></label>
+          <select id="csv_col_fat"></select>
+        </div>
+        <div class="field" style="margin-bottom:0"></div>
+      </div>
+      <!-- プレビュー -->
+      <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">プレビュー（先頭3件）</div>
+      <div id="csvPreview" style="background:var(--bg);border-radius:8px;padding:10px;font-size:12px;font-family:monospace;color:var(--text);line-height:1.8;max-height:100px;overflow-y:auto;"></div>
+      <div id="csvImportInfo" style="margin-top:10px;font-size:12px;color:var(--muted);"></div>
+    </div>
+
+    <div class="modal-footer" style="margin-top:16px;">
+      <button class="btn btn-ghost" onclick="closeModal('modalCsvImport');csvReset();">キャンセル</button>
+      <button class="btn btn-primary" id="csvNextBtn" onclick="csvNext()" style="display:none;">次へ →</button>
+      <button class="btn btn-primary" id="csvImportBtn" onclick="csvImport()" style="display:none;">インポート</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Weight Modal -->
+<div class="overlay" id="modalEditWeight" onclick="overlayClose(event, 'modalEditWeight')">
+  <div class="modal">
+    <div class="modal-title" style="color:var(--gold);">✏️ 体重記録 編集</div>
+    <input type="hidden" id="ew_id">
+    <div class="field">
+      <label>ユーザー <span class="req">*</span></label>
+      <select id="ew_user"></select>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>体重 (kg) <span class="req">*</span></label>
+        <input type="number" id="ew_weight" placeholder="70.5" step="0.1">
+      </div>
+      <div class="field">
+        <label>体脂肪率 (%)</label>
+        <input type="number" id="ew_fat" placeholder="18.5" step="0.1">
+      </div>
+    </div>
+    <div class="field">
+      <label>計測日 <span class="req">*</span></label>
+      <div class="datepicker-wrap" id="dp_ew_wrap">
+        <div class="datepicker-input" id="dp_ew_display" onclick="dpToggle('dp_ew')">日付を選択</div>
+        <span class="datepicker-icon">📅</span>
+        <input type="hidden" id="ew_date">
+      </div>
+    </div>
+    <div class="field">
+      <label>メモ</label>
+      <input type="text" id="ew_memo" placeholder="体調など">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modalEditWeight')">キャンセル</button>
+      <button class="btn btn-primary" onclick="updateWeight()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Training Modal -->
+<div class="overlay" id="modalEditTraining" onclick="overlayClose(event, 'modalEditTraining')">
+  <div class="modal">
+    <div class="modal-title" style="color:var(--gold);">✏️ トレーニング 編集</div>
+    <input type="hidden" id="et_id">
+    <div class="field">
+      <label>ユーザー <span class="req">*</span></label>
+      <select id="et_user"></select>
+    </div>
+    <div class="field">
+      <label>種別 <span class="req">*</span></label>
+      <select id="et_type"></select>
+    </div>
+    <div class="field">
+      <label>場所・施設名</label>
+      <input type="text" id="et_location" placeholder="例：ゴールドジム渋谷">
+    </div>
+
+    <div class="row2">
+      <div class="field">
+        <label>日付 <span class="req">*</span></label>
+        <div class="datepicker-wrap" id="dp_et_wrap">
+          <div class="datepicker-input" id="dp_et_display" onclick="dpToggle('dp_et')">日付を選択</div>
+          <span class="datepicker-icon">📅</span>
+          <input type="hidden" id="et_date">
+        </div>
+      </div>
+      <div class="field">
+        <label>時間 (分)</label>
+        <input type="number" id="et_duration" placeholder="60">
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>消費カロリー (kcal)</label>
+        <input type="number" id="et_cal" placeholder="300">
+      </div>
+      <div class="field">
+        <label>体重 (kg)</label>
+        <input type="number" id="et_weight" placeholder="70.5" step="0.1">
+      </div>
+    </div>
+    <div class="field">
+      <label>メモ</label>
+      <textarea id="et_memo" placeholder="メモ…"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modalEditTraining')">キャンセル</button>
+      <button class="btn btn-primary" onclick="updateTraining()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── カレンダーポータル（body直下、z-index最上位） ── -->
+<div class="datepicker-cal" id="dp_t_cal"></div>
+<div class="datepicker-cal" id="dp_w_cal"></div>
+<div class="datepicker-cal" id="dp_ew_cal"></div>
+<div class="datepicker-cal" id="dp_et_cal"></div>
 
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
 <script>
+// ════════════════════════════════════════
+//  HELPERS
+// ════════════════════════════════════════
+const uid      = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
+const now      = () => new Date().toISOString();
+const today    = () => { const d = new Date(); d.setTime(d.getTime() + 9*60*60*1000); return d.toISOString().split('T')[0]; };
+const esc      = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const getUser  = id => db.users.find(u => u.id === id);
+const getType  = id => TRAINING_TYPES.find(t => t.id === id);
+const userColor= id => { const i = db.users.findIndex(u => u.id === id); return USER_COLORS[i % USER_COLORS.length]; };
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+function openModal(id)  { 
+  document.getElementById(id).classList.add('open'); 
+  if (id === 'modalCsvImport') {
+    populateCsvUserSelect();
+    initCsvDrop();
+  }
+}
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function overlayClose(e, id) { if (e.target.classList.contains('overlay')) closeModal(id); }
+
+// ── アイコン関連（Supabase Storage） ──
+const AVATAR_BUCKET = 'avatars';
+
+// プレビュー表示（ファイルをinputから読み込み）
+function previewIcon(previewId, input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const el = document.getElementById(previewId);
+    el.innerHTML = '';
+    el.style.padding = '0';
+    const img = document.createElement('img');
+    img.src = e.target.result;
+    img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+    el.appendChild(img);
+    el.dataset.file = 'pending'; // アップロード待ち
+    el._pendingFile = file;      // Fileオブジェクトを保持
+  };
+  reader.readAsDataURL(file);
+}
+
+// Supabase StorageにアップロードしてURLを返す
+async function uploadAvatar(userId, file) {
+  const ext = file.name.split('.').pop() || 'jpg';
+  const path = `${userId}.${ext}`;
+  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${AVATAR_BUCKET}/${path}`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': file.type || 'image/jpeg',
+      'x-upsert': 'true'
+    },
+    body: file
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error('アバターアップロード失敗: ' + txt);
+  }
+  return `${SUPABASE_URL}/storage/v1/object/public/${AVATAR_BUCKET}/${path}?t=${Date.now()}`;
+}
+
+// アイコンURLをlocalStorageにキャッシュ
+function cacheIconUrl(userId, url) {
+  try { localStorage.setItem('icon_url_' + userId, url); } catch(e) {}
+}
+function getCachedIconUrl(userId) {
+  try { return localStorage.getItem('icon_url_' + userId); } catch(e) { return null; }
+}
+
+// アイコンHTML生成（キャッシュURLを使用）
+function getIconHtml(userId, size=40) {
+  const url = getCachedIconUrl(userId);
+  if (url) {
+    return `<img src="${url}" style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;" onerror="this.parentElement.innerHTML='<div style=\'width:${size}px;height:${size}px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:${Math.floor(size*0.5)}px;\'>👤</div>'">`;
+  }
+  return `<div style="width:${size}px;height:${size}px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:${Math.floor(size*0.5)}px;">👤</div>`;
+}
+
+// 全ユーザーのアバターURLをSupabaseから取得してキャッシュ
+async function refreshAvatarCache() {
+  if (!db.users.length) return;
+  for (const u of db.users) {
+    // jpg/png/webpを試す
+    for (const ext of ['jpg','png','jpeg','webp']) {
+      const url = `${SUPABASE_URL}/storage/v1/object/public/${AVATAR_BUCKET}/${u.id}.${ext}`;
+      try {
+        const res = await fetch(url, { method: 'HEAD' });
+        if (res.ok) { cacheIconUrl(u.id, url + '?t=' + Date.now()); break; }
+      } catch(e) {}
+    }
+  }
+}
+
+// ════════════════════════════════════════
+//  SUPABASE CONFIG
+// ════════════════════════════════════════
+const SUPABASE_URL  = 'https://cgecaukugbjybeddvphg.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNnZWNhdWt1Z2JqeWJlZGR2cGhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEyOTU1MTksImV4cCI6MjA4Njg3MTUxOX0.JbzUxvwkWdy9kknkmcgDNSA7amJMpnzbntIPx3lkS8I';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
 // ════════════════════════════════════════
 //  DATA
 // ════════════════════════════════════════
@@ -888,78 +1403,286 @@ const TRAINING_TYPES = [
   { id:'other',      icon:'⚡', label:'その他' },
 ];
 
-const USER_COLORS = ['#00D4FF','#FF4D6A','#3DFF8F','#FFD166','#FF69B4','#B48EFF','#FF9F43','#26C6DA'];
+const USER_COLORS = ['#00D4FF','#3B82F6','#8B5CF6','#06B6D4','#0EA5E9','#6366F1','#14B8A6','#0284C7'];
 
-let db = load();
+// インメモリDB（Supabaseから読み込んだデータをキャッシュ）
+let db = { users:[], trainings:[], weights:[], comments:[] };
+let currentUser = null; // ログイン中のSupabaseユーザー
+let accessToken = null;  // JWTトークン
 
-function load() {
+// ════════════════════════════════════════
+//  AUTH
+// ════════════════════════════════════════
+function switchAuthTab(tab) {
+  const isLogin = tab === 'login';
+  document.getElementById('tabLogin').style.cssText   = isLogin ? 'flex:1;padding:8px;border:none;border-radius:6px;cursor:pointer;font-family:var(--font-body);font-size:13px;font-weight:600;background:var(--accent);color:#000;' : 'flex:1;padding:8px;border:none;border-radius:6px;cursor:pointer;font-family:var(--font-body);font-size:13px;font-weight:600;background:transparent;color:var(--muted);';
+  document.getElementById('tabSignup').style.cssText  = !isLogin ? 'flex:1;padding:8px;border:none;border-radius:6px;cursor:pointer;font-family:var(--font-body);font-size:13px;font-weight:600;background:var(--accent);color:#000;' : 'flex:1;padding:8px;border:none;border-radius:6px;cursor:pointer;font-family:var(--font-body);font-size:13px;font-weight:600;background:transparent;color:var(--muted);';
+  document.getElementById('authSubmitBtn').textContent = isLogin ? 'ログイン' : '新規登録する';
+  document.getElementById('authError').style.display  = 'none';
+}
+
+function showAuthError(msg) {
+  const el = document.getElementById('authError');
+  el.textContent = msg; el.style.display = 'block';
+}
+
+async function authSubmit() {
+  const email    = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPassword').value;
+  const isLogin  = document.getElementById('authSubmitBtn').textContent === 'ログイン';
+
+  if (!email || !password) { showAuthError('サイトIDとパスワードを入力してください'); return; }
+
+  document.getElementById('authLoading').style.display = 'block';
+  document.getElementById('authSubmitBtn').style.display = 'none';
+  document.getElementById('authError').style.display = 'none';
+
   try {
-    const raw = localStorage.getItem('ft-data');
-    if (raw) return JSON.parse(raw);
-  } catch(e) {}
-  return { users:[], trainings:[], weights:[] };
-}
-function save() {
-  localStorage.setItem('ft-data', JSON.stringify(db));
-}
-
-// ════════════════════════════════════════
-//  HELPERS
-// ════════════════════════════════════════
-const uid  = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
-const now  = () => new Date().toISOString();
-const today = () => new Date().toISOString().split('T')[0];
-const esc  = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-const getUser  = id => db.users.find(u => u.id === id);
-const getType  = id => TRAINING_TYPES.find(t => t.id === id);
-const userColor = id => { const i = db.users.findIndex(u => u.id === id); return USER_COLORS[i % USER_COLORS.length]; };
-
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2500);
+    if (isLogin) {
+      const { data, error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+    } else {
+      const { data, error } = await sb.auth.signUp({ email, password });
+      if (error) throw error;
+      if (!data.session) {
+        document.getElementById('authLoading').style.display = 'none';
+        document.getElementById('authSubmitBtn').style.display = 'block';
+        showAuthError('確認メールを送信しました。メールのリンクをクリックしてください。');
+        return;
+      }
+    }
+  } catch(e) {
+    const msg = e.message || 'エラーが発生しました';
+    const jpMsg = msg.includes('Invalid login') ? 'サイトIDまたはパスワードが違います'
+                : msg.includes('already registered') ? 'このサイトIDは既に登録されています'
+                : msg.includes('Password should') ? 'パスワードは6文字以上にしてください'
+                : msg;
+    showAuthError(jpMsg);
+    document.getElementById('authLoading').style.display = 'none';
+    document.getElementById('authSubmitBtn').style.display = 'block';
+  }
 }
 
-function openModal(id) {
-  document.getElementById(id).classList.add('open');
-}
-function closeModal(id) {
-  document.getElementById(id).classList.remove('open');
-}
-function overlayClose(e, id) {
-  if (e.target.classList.contains('overlay')) closeModal(id);
+async function signOut() {
+  try {
+    await sb.auth.signOut();
+    // 念のため手動で画面切り替え
+    currentUser = null;
+    accessToken = null;
+    _lastUserId = null;
+    db = { users:[], trainings:[], weights:[], comments:[] };
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('appScreen').style.display   = 'none';
+    closeDrawer();
+  } catch(e) {
+    alert('ログアウトに失敗しました: ' + e.message);
+  }
 }
 
-// ════════════════════════════════════════
-//  TABS
-// ════════════════════════════════════════
-document.querySelectorAll('.nav-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    const tab = btn.dataset.tab;
-    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-    document.getElementById('sec-' + tab).classList.add('active');
-    if (tab === 'dashboard') renderDashboard();
-  });
+// 認証状態の監視
+let _lastUserId = null;
+sb.auth.onAuthStateChange(async (event, session) => {
+  if (session && session.user) {
+    const uid = session.user.id;
+    if (event === 'SIGNED_OUT') return;
+    currentUser = session.user;
+    accessToken = session.access_token;
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('appScreen').style.display   = 'block';
+    if (_lastUserId !== uid || event === 'SIGNED_IN') {
+      _lastUserId = uid;
+
+      await loadAllData();
+      updateAll();
+    }
+  } else {
+    _lastUserId = null;
+    currentUser = null;
+    accessToken = null;
+    db = { users:[], trainings:[], weights:[], comments:[] };
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('appScreen').style.display   = 'none';
+  }
 });
+
+
+
+// ════════════════════════════════════════
+//  SUPABASE DATA LAYER
+// ════════════════════════════════════════
+function getToken() {
+  return accessToken;
+}
+
+async function sbFetch(path, method='GET', body=null) {
+  const token = getToken();
+  const opts = {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': SUPABASE_ANON,
+      'Authorization': `Bearer ${token}`,
+      'Prefer': 'return=minimal'
+    }
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, opts);
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(txt || `HTTP ${res.status}`);
+  }
+  // GETのみJSONを返す、それ以外は空
+  if (method === 'GET') return res.json();
+  return null;
+}
+
+async function loadAllData() {
+  if (!currentUser) return;
+  const oid = currentUser.id;
+  try {
+    const users = await sbFetch(`users?owner_id=eq.${oid}&order=created_at`);
+    db.users = (users||[]).map(u => ({
+      id: u.id, name: u.name, height: u.height,
+      targetWeight: u.target_weight, createdAt: u.created_at
+    }));
+
+    const trainings = await sbFetch(`trainings?owner_id=eq.${oid}&order=date.desc`);
+    db.trainings = (trainings||[]).map(t => ({
+      id: t.id, userId: t.user_id, type: t.type, date: t.date,
+      location: t.location, duration: t.duration,
+      cal: t.cal, postWeight: t.post_weight, memo: t.memo, createdAt: t.created_at
+    }));
+
+    const weights = await sbFetch(`weights?owner_id=eq.${oid}&order=date.desc`);
+    db.weights = (weights||[]).map(w => ({
+      id: w.id, userId: w.user_id, weight: w.weight, date: w.date,
+      fat: w.fat, memo: w.memo, createdAt: w.created_at
+    }));
+
+    const comments = await sbFetch(`comments?owner_id=eq.${oid}&order=created_at`);
+    db.comments = (comments||[]).map(c => ({ 
+      id: c.id, trainingId: c.training_id, userId: c.user_id, 
+      comment: c.comment, createdAt: c.created_at 
+    }));
+
+    console.log('loadAllData:', { users: db.users.length, trainings: db.trainings.length, weights: db.weights.length, comments: db.comments.length });
+    await refreshAvatarCache();
+  } catch(e) {
+    console.error('loadAllData failed:', e);
+  }
+}
+
+async function sbSaveUser(name, height, targetWeight) {
+  await sbFetch('users', 'POST', {
+    owner_id: currentUser.id, name,
+    height: height||null, target_weight: targetWeight||null
+  });
+  await loadAllData();
+}
+
+async function sbUpdateUser(id, name, height, targetWeight) {
+  await sbFetch(`users?id=eq.${id}&owner_id=eq.${currentUser.id}`, 'PATCH',
+    { name, height: height||null, target_weight: targetWeight||null });
+  await loadAllData();
+}
+
+async function sbDeleteUser(id) {
+  await sbFetch(`users?id=eq.${id}&owner_id=eq.${currentUser.id}`, 'DELETE');
+  await loadAllData();
+}
+
+async function sbSaveTraining(data) {
+  await sbFetch('trainings', 'POST', {
+    owner_id: currentUser.id, user_id: data.userId, type: data.type, date: data.date,
+    location: data.location||null,
+    duration: data.duration||null, cal: data.cal||null,
+    post_weight: data.postWeight||null, memo: data.memo||null
+  });
+}
+
+async function sbUpdateTraining(id, data) {
+  await sbFetch(`trainings?id=eq.${id}&owner_id=eq.${currentUser.id}`, 'PATCH', {
+    user_id: data.userId, type: data.type, date: data.date,
+    location: data.location||null,
+    duration: data.duration||null, cal: data.cal||null,
+    post_weight: data.postWeight||null, memo: data.memo||null
+  });
+}
+
+async function sbDeleteTraining(id) {
+  await sbFetch(`trainings?id=eq.${id}&owner_id=eq.${currentUser.id}`, 'DELETE');
+}
+
+async function sbSaveWeight(data) {
+  await sbFetch('weights', 'POST', {
+    owner_id: currentUser.id, user_id: data.userId, weight: data.weight, date: data.date,
+    fat: data.fat||null, memo: data.memo||null
+  });
+}
+
+async function sbUpdateWeight(id, data) {
+  await sbFetch(`weights?id=eq.${id}&owner_id=eq.${currentUser.id}`, 'PATCH', {
+    user_id: data.userId, weight: data.weight, date: data.date,
+    fat: data.fat||null, memo: data.memo||null
+  });
+}
+
+async function sbDeleteWeight(id) {
+  await sbFetch(`weights?id=eq.${id}&owner_id=eq.${currentUser.id}`, 'DELETE');
+}
+
+async function sbAddComment(trainingId, userId, commentText) {
+  await sbFetch('comments', 'POST', {
+    owner_id: currentUser.id, 
+    training_id: trainingId, 
+    user_id: userId,
+    comment: commentText
+  });
+  await loadAllData();
+  renderTrainings();
+}
+
+async function sbDeleteComment(commentId) {
+  await sbFetch(`comments?id=eq.${commentId}&owner_id=eq.${currentUser.id}`, 'DELETE');
+  await loadAllData();
+  renderTrainings();
+}
 
 // ════════════════════════════════════════
 //  USERS
 // ════════════════════════════════════════
-function saveUser() {
+async function saveUser() {
   const name = document.getElementById('u_name').value.trim();
   if (!name) { alert('名前を入力してください'); return; }
-  db.users.push({
-    id: uid(), name,
-    height: parseFloat(document.getElementById('u_height').value) || null,
-    targetWeight: parseFloat(document.getElementById('u_target').value) || null,
-    createdAt: now()
-  });
-  save(); closeModal('modalUser');
-  ['u_name','u_height','u_target'].forEach(id => document.getElementById(id).value = '');
-  updateAll(); showToast('✅ ユーザーを登録しました');
+  const height = parseFloat(document.getElementById('u_height').value) || null;
+  const target = parseFloat(document.getElementById('u_target').value) || null;
+  // ログイン確認
+  if (!currentUser) { alert('ログインしていません。再度ログインしてください。'); return; }
+  const btn = document.querySelector('#modalUser .btn-primary');
+  if (btn) { btn.textContent = '保存中...'; btn.disabled = true; }
+  try {
+    await sbSaveUser(name, height, target);
+    // アイコン画像をSupabase Storageにアップロード
+    const iconEl = document.getElementById('u_icon_preview');
+    if (iconEl && iconEl._pendingFile && db.users.length > 0) {
+      const lastUser = db.users[db.users.length - 1];
+      try {
+        const url = await uploadAvatar(lastUser.id, iconEl._pendingFile);
+        cacheIconUrl(lastUser.id, url);
+      } catch(e) { console.error('avatar upload:', e); }
+      delete iconEl._pendingFile;
+      delete iconEl.dataset.file;
+    }
+    closeModal('modalUser');
+    ['u_name','u_height','u_target'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('u_icon_preview').innerHTML = '👤';
+    document.getElementById('u_icon_preview').style.padding = '';
+    updateAll(); showToast('✅ ユーザーを登録しました');
+  } catch(e) {
+    alert('エラー: ' + e.message);
+  } finally {
+    if (btn) { btn.textContent = '登録'; btn.disabled = false; }
+  }
 }
 
 function openEditUser(id) {
@@ -968,33 +1691,62 @@ function openEditUser(id) {
   document.getElementById('eu_name').value = u.name;
   document.getElementById('eu_height').value = u.height || '';
   document.getElementById('eu_target').value = u.targetWeight || '';
+  // 既存アイコンを表示（Supabaseキャッシュから）
+  const iconEl = document.getElementById('eu_icon_preview');
+  const existingUrl = getCachedIconUrl(id);
+  if (existingUrl) {
+    iconEl.innerHTML = `<img src="${existingUrl}" style="width:100%;height:100%;object-fit:cover;">`;
+    iconEl.style.padding = '0';
+  } else {
+    iconEl.innerHTML = '👤';
+  }
+  delete iconEl._pendingFile;
+  delete iconEl.dataset.file;
   openModal('modalEditUser');
 }
 
-function updateUser() {
-  const id = document.getElementById('eu_id').value;
-  const name = document.getElementById('eu_name').value.trim();
-  if (!name) { alert('名前を入力してください'); return; }
-  const u = getUser(id); if (!u) return;
-  u.name = name;
-  u.height = parseFloat(document.getElementById('eu_height').value) || null;
-  u.targetWeight = parseFloat(document.getElementById('eu_target').value) || null;
-  save(); closeModal('modalEditUser');
-  updateAll(); showToast('✅ ユーザー情報を更新しました');
+// saveUser: 新規プロフィール作成（名前をmetadataから自動セット）
+function openModalUser() {
+  // 名前をSupabaseのuser_metadataから自動入力
+
+  openModal('modalUser');
 }
 
-function deleteUser(id) {
-  if (!confirm('このユーザーと関連データを削除しますか？')) return;
-  db.users = db.users.filter(u => u.id !== id);
-  db.trainings = db.trainings.filter(t => t.userId !== id);
-  db.weights = db.weights.filter(w => w.userId !== id);
-  save(); updateAll(); showToast('🗑️ ユーザーを削除しました');
+async function updateUser() {
+  const id   = document.getElementById('eu_id').value;
+  const name = document.getElementById('eu_name').value.trim();
+  if (!name) { alert('名前を入力してください'); return; }
+  const height = parseFloat(document.getElementById('eu_height').value) || null;
+  const target = parseFloat(document.getElementById('eu_target').value) || null;
+  try {
+    await sbUpdateUser(id, name, height, target);
+    // アイコン更新（Supabase Storage）
+    const iconEl = document.getElementById('eu_icon_preview');
+    if (iconEl && iconEl._pendingFile) {
+      try {
+        const url = await uploadAvatar(id, iconEl._pendingFile);
+        cacheIconUrl(id, url);
+      } catch(e) { console.error('avatar update:', e); }
+      delete iconEl._pendingFile;
+      delete iconEl.dataset.file;
+    }
+    closeModal('modalEditUser');
+    updateAll(); showToast('✅ ユーザー情報を更新しました');
+  } catch(e) { alert('エラー: ' + e.message); }
+}
+
+async function deleteUser(id) {
+  if (!confirm('このユーザーと全データを削除しますか？')) return;
+  try {
+    await sbDeleteUser(id);
+    updateAll(); showToast('🗑️ ユーザーを削除しました');
+  } catch(e) { alert('エラー: ' + e.message); }
 }
 
 function renderUsers() {
   const grid = document.getElementById('userGrid');
   if (!db.users.length) {
-    grid.innerHTML = `<div class="empty"><div class="empty-icon">👤</div><div class="empty-text">ユーザーを追加してください</div></div>`;
+    grid.innerHTML = `<div class="empty"><div class="empty-icon">👥</div><div class="empty-text">ユーザーを追加してください</div></div>`;
     return;
   }
   grid.innerHTML = db.users.map((u,i) => {
@@ -1008,9 +1760,12 @@ function renderUsers() {
       : 0;
     return `<div class="user-card" style="border-top-color:${color}">
       <div class="user-card-header">
-        <div>
-          <div class="user-name">${esc(u.name)}</div>
-          ${u.height ? `<div class="user-sub">身長 ${u.height} cm</div>` : ''}
+        <div style="display:flex;align-items:center;gap:12px;">
+          ${getIconHtml(u.id, 44)}
+          <div>
+            <div class="user-name">${esc(u.name)}</div>
+            ${u.height ? `<div class="user-sub">身長 ${u.height} cm</div>` : ''}
+          </div>
         </div>
         <div style="display:flex;gap:6px;">
           <button class="btn btn-sm" style="background:${color}22;color:${color};border:1px solid ${color}44;" onclick="openEditUser('${u.id}')">編集</button>
@@ -1023,10 +1778,31 @@ function renderUsers() {
           <div class="user-stat-label">トレーニング</div>
         </div>
         <div class="user-stat">
-          <div class="user-stat-val" style="color:var(--green)">${latest ? latest.weight + 'kg' : '--'}</div>
+          <div class="user-stat-val" style="color:${color}">${latest ? latest.weight + 'kg' : '--'}</div>
           <div class="user-stat-label">現在体重</div>
         </div>
       </div>
+      ${(() => {
+        const oldest = uws[uws.length - 1];
+        if (oldest && latest && oldest.id !== latest.id) {
+          const change = (latest.weight - oldest.weight).toFixed(1);
+          const isPositive = parseFloat(change) > 0;
+          const changeColor = isPositive ? 'var(--red)' : '#00D4FF';
+          return `
+            <div style="background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.15);border-radius:8px;padding:10px;margin-top:8px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div style="font-size:11px;color:var(--muted);">
+                  開始時 ${oldest.weight}kg → 現在 ${latest.weight}kg
+                </div>
+                <div style="font-size:16px;font-weight:700;color:${changeColor};">
+                  ${isPositive ? '+' : ''}${change}kg
+                </div>
+              </div>
+            </div>
+          `;
+        }
+        return '';
+      })()}
       ${u.targetWeight ? `
       <div style="margin-bottom:6px;">
         <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:5px;">
@@ -1055,55 +1831,58 @@ function populateTrainingSelects() {
     TRAINING_TYPES.map(t => `<option value="${t.id}">${t.icon} ${t.label}</option>`).join('');
 }
 
-function saveTraining() {
-  const userId = document.getElementById('t_user').value;
-  const type   = document.getElementById('t_type').value;
-  const date   = document.getElementById('t_date').value;
-  if (!userId || !type || !date) { alert('必須項目を入力してください'); return; }
+async function saveTraining() {
+  const type = document.getElementById('t_type').value;
+  const date = document.getElementById('t_date').value;
+  if (!type || !date) { alert('種別と日付を入力してください'); return; }
   const postWeight = parseFloat(document.getElementById('t_weight').value) || null;
-  db.trainings.push({
-    id: uid(), userId, type, date,
+  const userId = document.getElementById('t_user').value;
+  if (!userId) { alert('ユーザーを選択してください'); return; }
+  const data = {
+    userId, type, date,
     location: document.getElementById('t_location').value.trim(),
-    address:  document.getElementById('t_address').value.trim(),
+
     duration: parseFloat(document.getElementById('t_duration').value) || null,
     cal:      parseFloat(document.getElementById('t_cal').value) || null,
     postWeight,
-    memo:     document.getElementById('t_memo').value.trim(),
-    createdAt: now()
-  });
-  // トレーニング後体重が入力されていれば体重記録にも自動追加
-  if (postWeight) {
-    db.weights.push({
-      id: uid(), userId, weight: postWeight, date,
-      fat: null, memo: 'トレーニング後計測（自動）',
-      createdAt: now()
-    });
-  }
-  save(); closeModal('modalTraining');
-  ['t_location','t_address','t_duration','t_cal','t_weight','t_memo'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('t_date').value = '';
-  document.getElementById('dp_t_display').textContent = '日付を選択';
-  dpInit('dp_t', today());
-  updateAll();
-  showToast(postWeight ? '✅ トレーニングと体重を記録しました' : '✅ トレーニングを記録しました');
+    memo:     document.getElementById('t_memo').value.trim()
+  };
+  try {
+    await sbSaveTraining(data);
+    if (postWeight) {
+      await sbSaveWeight({ userId: data.userId, weight: postWeight, date, fat: null, memo: 'トレーニング後計測（自動）' });
+    }
+    await loadAllData();
+    closeModal('modalTraining');
+    ['t_location','t_duration','t_cal','t_weight','t_memo'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('t_date').value = '';
+    document.getElementById('dp_t_display').textContent = '日付を選択';
+    dpInit('dp_t', today());
+    updateAll();
+    showToast(postWeight ? '✅ トレーニングと体重を記録しました' : '✅ トレーニングを記録しました');
+  } catch(e) { alert('エラー: ' + e.message); }
 }
 
-function deleteTraining(id) {
+async function deleteTraining(id) {
   if (!confirm('この記録を削除しますか？')) return;
-  db.trainings = db.trainings.filter(t => t.id !== id);
-  save(); renderTrainings(); renderDashboard(); showToast('🗑️ 削除しました');
+  try {
+    await sbDeleteTraining(id);
+    await loadAllData(); renderTrainings(); renderDashboard(); showToast('🗑️ 削除しました');
+  } catch(e) { alert('エラー: ' + e.message); }
 }
 
 function openEditTraining(t) {
   document.getElementById('et_id').value       = t.id;
+  // ユーザーselect設定
+  const userSel = document.getElementById('et_user');
+  userSel.innerHTML = db.users.map(u => `<option value="${u.id}">${esc(u.name)}</option>`).join('');
+  userSel.value = t.userId;
   document.getElementById('et_location').value = t.location || '';
-  document.getElementById('et_address').value  = t.address  || '';
+
   document.getElementById('et_duration').value = t.duration || '';
   document.getElementById('et_weight').value   = t.postWeight || '';
   document.getElementById('et_cal').value      = t.cal      || '';
   document.getElementById('et_memo').value     = t.memo     || '';
-  const u = getUser(t.userId);
-  document.getElementById('et_username').textContent = u ? u.name : '不明';
   // 種別セレクト
   document.getElementById('et_type').innerHTML = TRAINING_TYPES.map(tp =>
     `<option value="${tp.id}"${tp.id === t.type ? ' selected' : ''}>${tp.icon} ${tp.label}</option>`).join('');
@@ -1111,38 +1890,35 @@ function openEditTraining(t) {
   openModal('modalEditTraining');
 }
 
-function updateTraining() {
-  const id   = document.getElementById('et_id').value;
-  const type = document.getElementById('et_type').value;
-  const date = document.getElementById('et_date').value;
-  if (!type || !date) { alert('種別と日付は必須です'); return; }
-  const t = db.trainings.find(x => x.id === id);
-  if (!t) return;
+async function updateTraining() {
+  const id     = document.getElementById('et_id').value;
+  const userId = document.getElementById('et_user').value;
+  const type   = document.getElementById('et_type').value;
+  const date   = document.getElementById('et_date').value;
+  if (!userId || !type || !date) { alert('ユーザー・種別・日付は必須です'); return; }
   const newPostWeight = parseFloat(document.getElementById('et_weight').value) || null;
-  const oldPostWeight = t.postWeight || null;
-  t.type       = type;
-  t.date       = date;
-  t.location   = document.getElementById('et_location').value.trim();
-  t.address    = document.getElementById('et_address').value.trim();
-  t.duration   = parseFloat(document.getElementById('et_duration').value) || null;
-  t.cal        = parseFloat(document.getElementById('et_cal').value)      || null;
-  t.postWeight = newPostWeight;
-  t.memo       = document.getElementById('et_memo').value.trim();
-  // 体重記録の同期（自動追加分のみ更新）
-  const autoMemo = 'トレーニング後計測（自動）';
-  if (newPostWeight && !oldPostWeight) {
-    // 新たに体重が入力された → 追加
-    db.weights.push({ id: uid(), userId: t.userId, weight: newPostWeight, date: t.date, fat: null, memo: autoMemo, createdAt: now() });
-  } else if (!newPostWeight && oldPostWeight) {
-    // 体重が削除された → 同日・同ユーザーの自動記録を削除
-    db.weights = db.weights.filter(w => !(w.userId === t.userId && w.date === t.date && w.memo === autoMemo && w.weight === oldPostWeight));
-  } else if (newPostWeight && oldPostWeight && newPostWeight !== oldPostWeight) {
-    // 体重が変更された → 同日・同ユーザーの自動記録を更新
-    const existing = db.weights.find(w => w.userId === t.userId && w.date === t.date && w.memo === autoMemo && w.weight === oldPostWeight);
-    if (existing) existing.weight = newPostWeight;
-  }
-  save(); closeModal('modalEditTraining');
-  updateAll(); showToast('✅ トレーニングを更新しました');
+  const data = {
+    userId, type, date,
+    location: document.getElementById('et_location').value.trim(),
+
+    duration: parseFloat(document.getElementById('et_duration').value) || null,
+    cal:      parseFloat(document.getElementById('et_cal').value) || null,
+    postWeight: newPostWeight,
+    memo: document.getElementById('et_memo').value.trim()
+  };
+  try {
+    await sbUpdateTraining(id, data);
+    if (newPostWeight) {
+      // 同日・同ユーザーの体重記録が既にあるか確認してなければ追加
+      const existing = db.weights.find(w => w.userId === document.getElementById('et_user')?.value && w.date === date);
+      if (!existing) {
+        const uid = db.trainings.find(t => t.id === id)?.userId;
+        if (uid) await sbSaveWeight({ userId: uid, weight: newPostWeight, date, fat: null, memo: 'トレーニング後計測（自動）' });
+      }
+    }
+    await loadAllData(); closeModal('modalEditTraining');
+    updateAll(); showToast('✅ トレーニングを更新しました');
+  } catch(e) { alert('エラー: ' + e.message); }
 }
 
 function renderTrainings() {
@@ -1170,7 +1946,10 @@ function renderTrainings() {
     div.className = 'list-item';
     div.style.cssText = `border-left-color:${col}`;
     div.innerHTML = `
-      <div class="list-item-icon">${tp?.icon||'⚡'}</div>
+      <div class="list-item-icon" style="position:relative;width:44px;height:44px;flex-shrink:0;">
+        ${getIconHtml(t.userId, 44)}
+        <div style="position:absolute;bottom:-2px;right:-2px;background:var(--bg2);border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:12px;border:1px solid var(--border);">${tp?.icon||'⚡'}</div>
+      </div>
       <div class="list-item-body">
         <div class="list-item-title">
           ${esc(tp?.label||t.type)}
@@ -1179,18 +1958,86 @@ function renderTrainings() {
         <div class="list-item-meta">
           📅 ${dateDisp}
           ${t.location ? ` &nbsp;📍 ${esc(t.location)}` : ''}
-          ${t.address  ? ` &nbsp;🗺️ ${esc(t.address)}`  : ''}
+          
         </div>
-        ${t.memo ? `<div class="list-item-meta" style="margin-top:3px;">💬 ${esc(t.memo)}</div>` : ''}
       </div>
       <div class="list-item-actions">
-        ${t.duration ? `<div style="text-align:center"><div style="font-family:var(--font-display);font-size:20px;color:var(--accent);font-weight:800">${t.duration}</div><div style="font-size:9px;color:var(--muted)">分</div></div>` : ''}
-        ${t.cal ? `<div style="text-align:center"><div style="font-family:var(--font-display);font-size:20px;color:var(--gold);font-weight:800">${t.cal}</div><div style="font-size:9px;color:var(--muted)">kcal</div></div>` : ''}
-        ${t.postWeight ? `<div style="text-align:center"><div style="font-family:var(--font-display);font-size:20px;color:var(--green);font-weight:800">${t.postWeight}</div><div style="font-size:9px;color:var(--muted)">kg</div></div>` : ''}
+        ${t.duration ? `<div style="text-align:center"><div style="font-family:var(--font-display);font-size:20px;color:#00D4FF;font-weight:800">${t.duration}</div><div style="font-size:9px;color:var(--muted)">分</div></div>` : ''}
+        ${t.cal ? `<div style="text-align:center"><div style="font-family:var(--font-display);font-size:20px;color:#0EA5E9;font-weight:800">${t.cal}</div><div style="font-size:9px;color:var(--muted)">kcal</div></div>` : ''}
+        ${t.postWeight ? `<div style="text-align:center"><div style="font-family:var(--font-display);font-size:20px;color:#06B6D4;font-weight:800">${t.postWeight}</div><div style="font-size:9px;color:var(--muted)">kg</div></div>` : ''}
         <button class="btn btn-sm" style="background:rgba(255,209,102,0.15);color:#FFD166;border:1px solid rgba(255,209,102,0.3);" data-edit-train>編集</button>
         <button class="btn btn-danger btn-sm" data-del-train>削除</button>
       </div>
+      ${t.memo ? `<div class="memo-row">💬 ${esc(t.memo)}</div>` : ''}
+      <div class="comment-row" data-comment-row></div>
     `;
+    // コメント表示
+    const commentRow = div.querySelector('[data-comment-row]');
+    const trainingComments = db.comments.filter(c => c.trainingId === t.id);
+    
+    // コメント入力フォーム
+    const commentForm = document.createElement('div');
+    commentForm.className = 'comment-form';
+    commentForm.innerHTML = `
+      <div style="display:flex;gap:8px;align-items:center;">
+        <select class="comment-user-select" style="padding:6px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;">
+          ${db.users.map(u => `<option value="${u.id}">${esc(u.name)}</option>`).join('')}
+        </select>
+        <input type="text" class="comment-input" placeholder="コメント（200文字まで）..." maxlength="200" style="flex:1;padding:6px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;">
+        <button class="comment-submit-btn" style="padding:6px 12px;background:rgba(0,212,255,0.15);color:var(--accent);border:1px solid rgba(0,212,255,0.3);border-radius:6px;font-size:12px;cursor:pointer;white-space:nowrap;">送信</button>
+      </div>
+    `;
+    commentRow.appendChild(commentForm);
+    
+    const submitBtn = commentForm.querySelector('.comment-submit-btn');
+    const input = commentForm.querySelector('.comment-input');
+    const userSel = commentForm.querySelector('.comment-user-select');
+    submitBtn.addEventListener('click', async () => {
+      const text = input.value.trim();
+      const userId = userSel.value;
+      if (!text) return;
+      if (text.length > 200) {
+        alert('コメントは200文字以内で入力してください');
+        return;
+      }
+      submitBtn.disabled = true;
+      submitBtn.textContent = '送信中...';
+      await sbAddComment(t.id, userId, text);
+      input.value = '';
+      submitBtn.disabled = false;
+      submitBtn.textContent = '送信';
+    });
+    
+    // 既存コメント表示
+    if (trainingComments.length > 0) {
+      const commentsWrap = document.createElement('div');
+      commentsWrap.style.cssText = 'margin-top:10px;';
+      trainingComments.forEach(c => {
+        const u = getUser(c.userId);
+        const commentDiv = document.createElement('div');
+        commentDiv.className = 'comment-item';
+        commentDiv.innerHTML = `
+          <div style="display:flex;gap:8px;align-items:flex-start;">
+            ${getIconHtml(c.userId, 24)}
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">${esc(u?.name||'?')} • ${new Date(c.createdAt).toLocaleString('ja-JP', {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</div>
+              <div style="font-size:13px;color:var(--text);word-break:break-word;">${esc(c.comment)}</div>
+            </div>
+            <button class="comment-delete-btn" data-comment-id="${c.id}" style="padding:2px 6px;background:rgba(255,77,106,0.15);color:var(--red);border:1px solid rgba(255,77,106,0.3);border-radius:4px;font-size:10px;cursor:pointer;">削除</button>
+          </div>
+        `;
+        commentsWrap.appendChild(commentDiv);
+      });
+      commentRow.appendChild(commentsWrap);
+      
+      // 削除ボタンのイベント
+      commentRow.querySelectorAll('.comment-delete-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!confirm('このコメントを削除しますか？')) return;
+          await sbDeleteComment(btn.dataset.commentId);
+        });
+      });
+    }
     div.querySelector('[data-del-train]').addEventListener('click', () => deleteTraining(t.id));
     div.querySelector('[data-edit-train]').addEventListener('click', () => openEditTraining(t));
     list.appendChild(div);
@@ -1201,6 +2048,8 @@ function renderTrainings() {
 //  WEIGHTS
 // ════════════════════════════════════════
 let weightChart = null;
+let dashWeightChart = null;
+let dashYearlyWeightChart = null;
 
 function populateWeightSelects() {
   const sel  = document.getElementById('w_user');
@@ -1210,55 +2059,62 @@ function populateWeightSelects() {
   fil.innerHTML = `<option value="all">👥 全員</option>` + opts;
 }
 
-function saveWeight() {
+async function saveWeight() {
   const userId = document.getElementById('w_user').value;
   const weight = parseFloat(document.getElementById('w_weight').value);
   const date   = document.getElementById('w_date').value;
   if (!userId || !weight || !date) { alert('必須項目を入力してください'); return; }
-  db.weights.push({
-    id: uid(), userId, weight, date,
-    fat:  parseFloat(document.getElementById('w_fat').value) || null,
-    memo: document.getElementById('w_memo').value.trim(),
-    createdAt: now()
-  });
-  save(); closeModal('modalWeight');
-  ['w_weight','w_fat','w_memo'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('w_date').value = '';
-  document.getElementById('dp_w_display').textContent = '日付を選択';
-  dpInit('dp_w', today());
-  updateAll(); showToast('✅ 体重を記録しました');
+  try {
+    await sbSaveWeight({
+      userId, weight, date,
+      fat:  parseFloat(document.getElementById('w_fat').value) || null,
+      memo: document.getElementById('w_memo').value.trim()
+    });
+    await loadAllData();
+    closeModal('modalWeight');
+    ['w_weight','w_fat','w_memo'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('w_date').value = '';
+    document.getElementById('dp_w_display').textContent = '日付を選択';
+    dpInit('dp_w', today());
+    updateAll(); showToast('✅ 体重を記録しました');
+  } catch(e) { alert('エラー: ' + e.message); }
 }
 
-function deleteWeight(id) {
+async function deleteWeight(id) {
   if (!confirm('この記録を削除しますか？')) return;
-  db.weights = db.weights.filter(w => w.id !== id);
-  save(); renderWeights(); renderDashboard(); showToast('🗑️ 削除しました');
+  try {
+    await sbDeleteWeight(id);
+    await loadAllData(); renderWeights(); renderDashboard(); showToast('🗑️ 削除しました');
+  } catch(e) { alert('エラー: ' + e.message); }
 }
 
 function openEditWeight(w) {
   document.getElementById('ew_id').value     = w.id;
+  // ユーザーselect設定
+  const userSel = document.getElementById('ew_user');
+  userSel.innerHTML = db.users.map(u => `<option value="${u.id}">${esc(u.name)}</option>`).join('');
+  userSel.value = w.userId;
   document.getElementById('ew_weight').value = w.weight;
   document.getElementById('ew_fat').value    = w.fat || '';
   document.getElementById('ew_memo').value   = w.memo || '';
-  const u = getUser(w.userId);
-  document.getElementById('ew_username').textContent = u ? u.name : '不明';
   dpInit('dp_ew', w.date || today());
   openModal('modalEditWeight');
 }
 
-function updateWeight() {
+async function updateWeight() {
   const id     = document.getElementById('ew_id').value;
   const weight = parseFloat(document.getElementById('ew_weight').value);
   const date   = document.getElementById('ew_date').value;
   if (!weight || !date) { alert('体重と日付は必須です'); return; }
-  const w = db.weights.find(x => x.id === id);
-  if (!w) return;
-  w.weight = weight;
-  w.date   = date;
-  w.fat    = parseFloat(document.getElementById('ew_fat').value) || null;
-  w.memo   = document.getElementById('ew_memo').value.trim();
-  save(); closeModal('modalEditWeight');
-  updateAll(); showToast('✅ 体重記録を更新しました');
+  try {
+    await sbUpdateWeight(id, {
+      weight, date,
+      fat:  parseFloat(document.getElementById('ew_fat').value) || null,
+      memo: document.getElementById('ew_memo').value.trim()
+    });
+    await loadAllData(); closeModal('modalEditWeight');
+    updateAll(); showToast('✅ 体重記録を更新しました');
+  } catch(e) { alert('エラー: ' + e.message); }
 }
 
 function renderWeights() {
@@ -1281,8 +2137,8 @@ function renderWeights() {
       const datasets = [{
         label: '体重(kg)',
         data: sorted.map(w => w.weight),
-        borderColor: '#3DFF8F', backgroundColor: 'rgba(61,255,143,0.1)',
-        tension: 0.4, pointBackgroundColor: '#3DFF8F', pointRadius: 4
+        borderColor: '#06B6D4', backgroundColor: 'rgba(6,182,212,0.1)',
+        tension: 0.4, pointBackgroundColor: '#06B6D4', pointRadius: 4
       }];
       if (sorted.some(w => w.fat)) {
         datasets.push({
@@ -1332,7 +2188,10 @@ function renderWeights() {
     div.className = 'list-item';
     div.style.cssText = `border-left-color:${col}`;
     div.innerHTML = `
-      <div class="list-item-icon">⚖️</div>
+      <div class="list-item-icon" style="position:relative;width:44px;height:44px;flex-shrink:0;">
+        ${getIconHtml(w.userId, 44)}
+        <div style="position:absolute;bottom:-2px;right:-2px;background:var(--bg2);border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:12px;border:1px solid var(--border);">⚖️</div>
+      </div>
       <div class="list-item-body">
         <div class="list-item-title">
           <span class="badge" style="background:${col}22;color:${col};border-color:${col}44;">${esc(u?.name||'?')}</span>
@@ -1345,8 +2204,19 @@ function renderWeights() {
       </div>
       <div class="list-item-actions" style="gap:10px;">
         <div style="text-align:right;">
-          <div class="weight-big">${w.weight} kg</div>
-          ${diff !== null ? `<div style="font-size:12px;" class="${parseFloat(diff)<=0?'diff-neg':'diff-pos'}">目標まで ${parseFloat(diff)>0?'+':''}${diff} kg</div>` : ''}
+          <div class="weight-big" style="color:#06B6D4;">${w.weight} kg</div>
+          ${(() => {
+            const userWeights = db.weights.filter(ww => ww.userId === w.userId).sort((a,b) => a.date.localeCompare(b.date));
+            const oldest = userWeights[0];
+            if (oldest && oldest.id !== w.id) {
+              const change = (w.weight - oldest.weight).toFixed(1);
+              const isPositive = parseFloat(change) > 0;
+              const changeColor = isPositive ? 'var(--red)' : '#00D4FF';
+              return `<div style="font-size:11px;color:${changeColor};margin-top:2px;">初期から ${isPositive ? '+' : ''}${change} kg</div>`;
+            }
+            return '';
+          })()}
+          ${diff !== null ? `<div style="font-size:12px;margin-top:2px;" class="${parseFloat(diff)<=0?'diff-neg':'diff-pos'}">目標まで ${parseFloat(diff)>0?'+':''}${diff} kg</div>` : ''}
         </div>
         <button class="btn btn-sm" style="background:rgba(255,209,102,0.15);color:#FFD166;border:1px solid rgba(255,209,102,0.3);" data-edit-weight="${w.id}">編集</button>
         <button class="btn btn-danger btn-sm" data-del-weight="${w.id}">削除</button>
@@ -1367,75 +2237,159 @@ let trendChart = null;
 
 function renderDashboard() {
   const thisMonth = new Date().toISOString().slice(0,7);
-  const monthTs   = db.trainings.filter(t => t.date.startsWith(thisMonth)).length;
   const totalMin  = db.trainings.reduce((s,t) => s + (t.duration||0), 0);
-  const totalKm   = db.trainings.reduce((s,t) => s + (t.distance||0), 0);
 
-  // Stats
+  // ── 月セレクターを構築（データのある月 + 当月）──
+  const monthSel = document.getElementById('dashMonthSelect');
+  const trainingMonths = db.trainings.map(t => t.date.slice(0,7));
+  const weightMonths = db.weights.map(w => w.date.slice(0,7));
+  const existingMonths = [...new Set([...trainingMonths, ...weightMonths])].sort().reverse();
+  if (!existingMonths.includes(thisMonth)) existingMonths.unshift(thisMonth);
+  // 現在の選択値を保持（なければ当月）
+  const prevVal = monthSel.value || thisMonth;
+  monthSel.innerHTML = existingMonths.map(m => {
+    const [y, mo] = m.split('-');
+    return `<option value="${m}" ${m===prevVal?'selected':''}>${y}年${parseInt(mo)}月</option>`;
+  }).join('');
+  const selMonth = monthSel.value || thisMonth;
+
+  // ── Stats（選択月ベース）──
+  const monthTs = db.trainings.filter(t => t.date.startsWith(selMonth)).length;
+  const isThisMonth = selMonth === thisMonth;
   document.getElementById('statsGrid').innerHTML = `
-    <div class="stat-card c-accent"><div class="stat-icon">👥</div><div class="stat-label">ユーザー数</div><div class="stat-value">${db.users.length}</div></div>
-    <div class="stat-card c-red"><div class="stat-icon">💪</div><div class="stat-label">総トレーニング</div><div class="stat-value">${db.trainings.length}</div></div>
-    <div class="stat-card c-green"><div class="stat-icon">📅</div><div class="stat-label">今月</div><div class="stat-value">${monthTs}</div><div class="stat-sub">回</div></div>
-    <div class="stat-card c-gold"><div class="stat-icon">⏱️</div><div class="stat-label">総時間</div><div class="stat-value">${totalMin ? (totalMin/60).toFixed(1) : 0}</div><div class="stat-sub">時間</div></div>
+    <div class="stat-card" style="background:rgba(0,212,255,0.12);border-color:rgba(0,212,255,0.3);"><div class="stat-icon">👥</div><div class="stat-label">ユーザー数</div><div class="stat-value" style="color:#00D4FF;">${db.users.length}</div></div>
+    <div class="stat-card" style="background:rgba(14,165,233,0.12);border-color:rgba(14,165,233,0.3);"><div class="stat-icon">💪</div><div class="stat-label">総トレーニング</div><div class="stat-value" style="color:#0EA5E9;">${db.trainings.length}</div></div>
+    <div class="stat-card" style="background:rgba(6,182,212,0.12);border-color:rgba(6,182,212,0.3);"><div class="stat-icon">📅</div><div class="stat-label">${isThisMonth?'今月':selMonth.replace('-','年')+'月'}</div><div class="stat-value" style="color:#06B6D4;">${monthTs}</div><div class="stat-sub">回</div></div>
+    <div class="stat-card" style="background:rgba(2,132,199,0.12);border-color:rgba(2,132,199,0.3);"><div class="stat-icon">⏱️</div><div class="stat-label">総時間</div><div class="stat-value" style="color:#0284C7;">${totalMin ? (totalMin/60).toFixed(1) : 0}</div><div class="stat-sub">時間</div></div>
   `;
 
-  // Monthly Trend Chart（ユーザー別積み上げ棒グラフ）
-  const months = [];
-  for (let i = 5; i >= 0; i--) {
-    const d = new Date(); d.setMonth(d.getMonth() - i);
-    months.push({ m: d.toISOString().slice(0, 7), lbl: `${d.getMonth() + 1}月` });
+  // ── 横棒グラフ（選択月のユーザー別トレーニング回数）──
+  const barsEl = document.getElementById('dashTrainBars');
+  const userCounts = db.users.map((u, idx) => ({
+    user: u,
+    count: db.trainings.filter(t => t.userId === u.id && t.date.slice(0,7) === selMonth).length,
+    color: USER_COLORS[idx % USER_COLORS.length]
+  })).sort((a,b) => b.count - a.count);
+  const maxCount = Math.max(...userCounts.map(u => u.count), 1);
+
+  if (!db.users.length) {
+    barsEl.innerHTML = `<div class="empty" style="padding:20px 0;color:var(--muted);">ユーザーを登録してください</div>`;
+  } else if (userCounts.every(u => u.count === 0)) {
+    barsEl.innerHTML = `<div class="empty" style="padding:20px 0;color:var(--muted);">この月のデータがありません</div>`;
+  } else {
+    barsEl.innerHTML = userCounts.map(({user, count, color}) => `
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+        <div style="flex-shrink:0;">${getIconHtml(user.id, 36)}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
+            <span style="font-size:13px;font-weight:600;color:var(--text);">${esc(user.name)}</span>
+            <span style="font-family:var(--font-display);font-size:22px;font-weight:800;color:${color};">${count}<span style="font-size:12px;color:var(--muted);margin-left:3px;">回</span></span>
+          </div>
+          <div style="height:10px;background:var(--bg3);border-radius:99px;overflow:hidden;">
+            <div style="height:100%;width:${count===0?0:(count/maxCount*100).toFixed(0)}%;background:${color};border-radius:99px;transition:width 0.4s ease;"></div>
+          </div>
+        </div>
+      </div>`).join('');
   }
 
-  // ユーザーごとに月別カウント
-  const userDatasets = db.users.map((u, idx) => {
-    const data = months.map(({ m }) =>
-      db.trainings.filter(t => t.userId === u.id && t.date.slice(0, 7) === m).length
-    );
-    return { label: u.name, data, backgroundColor: USER_COLORS[idx % USER_COLORS.length] + 'CC',
-             borderColor: USER_COLORS[idx % USER_COLORS.length], borderWidth: 1, borderRadius: 3 };
-  });
+  // ── 月別消費カロリー横棒グラフ ──
+  const calBarsEl = document.getElementById('dashCalBars');
+  const userCals = db.users.map((u, idx) => ({
+    user: u,
+    cal: db.trainings
+      .filter(t => t.userId === u.id && t.date.slice(0,7) === selMonth && t.cal)
+      .reduce((s, t) => s + (t.cal||0), 0),
+    color: USER_COLORS[idx % USER_COLORS.length]
+  })).sort((a,b) => b.cal - a.cal);
+  const maxCal = Math.max(...userCals.map(u => u.cal), 1);
 
-  const hasData = userDatasets.some(ds => ds.data.some(v => v > 0));
-  if (hasData) {
-    document.getElementById('chartTrendEmpty').style.display = 'none';
-    if (trendChart) trendChart.destroy();
-    const ctx = document.getElementById('chartTrend').getContext('2d');
-    // Y軸の最大値（整数の天井）
-    const maxVal = Math.max(...userDatasets.flatMap(ds => ds.data), 1);
-    trendChart = new Chart(ctx, {
-      type: 'bar',
-      data: { labels: months.map(m => m.lbl), datasets: userDatasets },
+  if (!db.users.length) {
+    calBarsEl.innerHTML = `<div class="empty" style="padding:20px 0;color:var(--muted);">ユーザーを登録してください</div>`;
+  } else if (userCals.every(u => u.cal === 0)) {
+    calBarsEl.innerHTML = `<div class="empty" style="padding:20px 0;color:var(--muted);">この月のカロリーデータがありません</div>`;
+  } else {
+    calBarsEl.innerHTML = userCals.map(({user, cal, color}) => `
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+        <div style="flex-shrink:0;">${getIconHtml(user.id, 36)}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
+            <span style="font-size:13px;font-weight:600;color:var(--text);">${esc(user.name)}</span>
+            <span style="font-family:var(--font-display);font-size:22px;font-weight:800;color:${color};">${cal.toLocaleString()}<span style="font-size:12px;color:var(--muted);margin-left:3px;">kcal</span></span>
+          </div>
+          <div style="height:10px;background:var(--bg3);border-radius:99px;overflow:hidden;">
+            <div style="height:100%;width:${cal===0?0:(cal/maxCal*100).toFixed(0)}%;background:${color};border-radius:99px;transition:width 0.4s ease;"></div>
+          </div>
+        </div>
+      </div>`).join('');
+  }
+
+  // ── 体重推移グラフ（当月） ──
+  const canvas = document.getElementById('dashWeightChart');
+  const emptyEl = document.getElementById('dashWeightEmpty');
+  const monthWeights = db.weights.filter(w => w.date.slice(0,7) === selMonth).sort((a,b) => a.date.localeCompare(b.date));
+  
+  if (dashWeightChart) dashWeightChart.destroy();
+  
+  if (!db.users.length || monthWeights.length === 0) {
+    canvas.style.display = 'none';
+    emptyEl.style.display = 'block';
+  } else {
+    canvas.style.display = 'block';
+    emptyEl.style.display = 'none';
+    
+    const datasets = db.users.map((u, idx) => {
+      const userWeights = monthWeights.filter(w => w.userId === u.id);
+      return {
+        label: u.name,
+        data: userWeights.map(w => ({ x: w.date.slice(5), y: w.weight })),
+        borderColor: USER_COLORS[idx % USER_COLORS.length],
+        backgroundColor: 'transparent',
+        tension: 0.3,
+        pointBackgroundColor: USER_COLORS[idx % USER_COLORS.length],
+        pointRadius: 4,
+        pointHoverRadius: 6
+      };
+    }).filter(ds => ds.data.length > 0);
+    
+    const ctx = canvas.getContext('2d');
+    dashWeightChart = new Chart(ctx, {
+      type: 'line',
+      data: { datasets },
       options: {
         responsive: true,
+        maintainAspectRatio: true,
+        aspectRatio: 2,
         plugins: {
           legend: {
             display: db.users.length > 1,
             labels: { color: '#8899A6', font: { size: 11 }, boxWidth: 12 }
+          },
+          datalabels: {
+            display: true,
+            align: 'top',
+            anchor: 'end',
+            color: function(context) {
+              return context.dataset.borderColor;
+            },
+            font: { size: 11, weight: 'bold' },
+            formatter: function(value) {
+              return value.y + 'kg';
+            }
           }
         },
         scales: {
           x: {
-            stacked: true,
-            ticks: { color: '#4A6578', font: { size: 11 } },
-            grid: { display: false }
+            type: 'category',
+            ticks: { color: '#4A6578', font: { size: 10 } },
+            grid: { color: '#1A3044' }
           },
           y: {
-            stacked: true,
-            beginAtZero: true,
-            max: maxVal + 1,
-            ticks: {
-              color: '#4A6578',
-              font: { size: 11 },
-              stepSize: 1,
-              callback: v => Number.isInteger(v) ? v : null
-            },
+            ticks: { color: '#4A6578', font: { size: 10 } },
             grid: { color: '#1A3044' }
           }
         }
       }
     });
-  } else {
-    document.getElementById('chartTrendEmpty').style.display = 'block';
   }
 
   // Type Bars
@@ -1444,7 +2398,7 @@ function renderDashboard() {
   db.trainings.forEach(t => { typeCnt[t.type] = (typeCnt[t.type]||0) + 1; });
   const sorted = TRAINING_TYPES.map(t => ({...t, cnt: typeCnt[t.id]||0})).filter(t=>t.cnt>0).sort((a,b)=>b.cnt-a.cnt);
   const maxCnt = sorted.length ? Math.max(...sorted.map(t=>t.cnt)) : 1;
-  const colors = ['#00D4FF','#FF4D6A','#3DFF8F','#FFD166','#FF69B4','#B48EFF'];
+  const colors = ['#00D4FF','#0EA5E9','#06B6D4','#0284C7','#0369A1','#075985'];
   document.getElementById('typeBars').innerHTML = sorted.length
     ? sorted.slice(0,8).map((t,i) => `
         <div class="type-bar-row">
@@ -1453,6 +2407,167 @@ function renderDashboard() {
           <div class="type-bar-count">${t.cnt}</div>
         </div>`).join('')
     : `<div style="color:var(--muted);font-size:13px;padding:10px 0;">データがありません</div>`;
+
+  // ── 最新トレーニング ──
+  const latestEl = document.getElementById('dashLatestTrainings');
+  if (!db.users.length) {
+    latestEl.innerHTML = `<div class="empty" style="padding:16px 0;color:var(--muted);">ユーザーを登録してください</div>`;
+  } else {
+    const latestItems = db.users.map((u, idx) => {
+      const color = USER_COLORS[idx % USER_COLORS.length];
+      const trains = db.trainings.filter(t => t.userId === u.id).sort((a,b) => b.date.localeCompare(a.date));
+      const latest = trains[0];
+      if (!latest) return `
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">
+          <div style="flex-shrink:0;">${getIconHtml(u.id, 36)}</div>
+          <div style="flex:1;">
+            <div style="font-size:13px;font-weight:600;color:var(--text);">${esc(u.name)}</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:2px;">記録なし</div>
+          </div>
+        </div>`;
+      const tp = getType(latest.type);
+      return `
+        <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">
+          <div style="flex-shrink:0;">${getIconHtml(u.id, 36)}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
+              <span style="font-size:13px;font-weight:600;color:var(--text);">${esc(u.name)}</span>
+              <span style="font-size:11px;background:${color}22;color:${color};border:1px solid ${color}44;border-radius:4px;padding:1px 6px;">${tp?.icon||'⚡'} ${tp?.label||latest.type}</span>
+            </div>
+            <div style="font-size:12px;color:var(--muted);">📅 ${latest.date.replace(/-/g,'/')}</div>
+            ${latest.memo ? `<div style="font-size:12px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">💬 ${esc(latest.memo)}</div>` : ''}
+          </div>
+        </div>`;
+    }).join('');
+    latestEl.innerHTML = latestItems + '<style>#dashLatestTrainings > div:last-of-type { border-bottom: none; }</style>';
+  }
+
+  // ── 月別平均体重グラフ ──
+  const yearlyCanvas = document.getElementById('dashYearlyWeightChart');
+  const yearlyEmpty = document.getElementById('dashYearlyWeightEmpty');
+  const yearlyUserSel = document.getElementById('dashYearlyUserSelect');
+  const yearlyPeriodSel = document.getElementById('dashYearlyPeriodSelect');
+  
+  // ユーザーセレクター構築
+  if (db.users.length > 0) {
+    const prevYearlyVal = yearlyUserSel.value || 'all';
+    yearlyUserSel.innerHTML = `<option value="all">全員</option>` + 
+      db.users.map(u => `<option value="${u.id}">${esc(u.name)}</option>`).join('');
+    yearlyUserSel.value = db.users.some(u => u.id === prevYearlyVal) || prevYearlyVal === 'all' ? prevYearlyVal : 'all';
+  }
+  
+  const selectedYearlyUser = yearlyUserSel.value;
+  const selectedYearlyPeriod = yearlyPeriodSel.value;
+  
+  if (dashYearlyWeightChart) dashYearlyWeightChart.destroy();
+  
+  if (!db.users.length || db.weights.length === 0) {
+    yearlyCanvas.style.display = 'none';
+    yearlyEmpty.style.display = 'block';
+  } else {
+    yearlyCanvas.style.display = 'block';
+    yearlyEmpty.style.display = 'none';
+    
+    // 期間に応じた月リストを生成
+    let monthsRange = [];
+    if (selectedYearlyPeriod === 'all') {
+      // 全期間：最も古い体重記録の月から今月まで
+      const allMonths = db.weights.map(w => w.date.slice(0,7)).sort();
+      const firstMonth = allMonths[0];
+      const now = new Date();
+      const [fy, fm] = firstMonth.split('-').map(Number);
+      let cursor = new Date(fy, fm - 1, 1);
+      const end = new Date(now.getFullYear(), now.getMonth(), 1);
+      while (cursor <= end) {
+        monthsRange.push(cursor.toISOString().slice(0,7));
+        cursor.setMonth(cursor.getMonth() + 1);
+      }
+    } else {
+      // 直近12ヶ月
+      for (let i = 11; i >= 0; i--) {
+        const d = new Date();
+        d.setMonth(d.getMonth() - i);
+        monthsRange.push(d.toISOString().slice(0,7));
+      }
+    }
+    
+    // ラベル形式：全期間は年をまたぐ可能性があるので「YY/MM」、直近12ヶ月は「MM月」
+    const formatLabel = (month) => {
+      if (selectedYearlyPeriod === 'all') {
+        const [y, m] = month.split('-');
+        return y.slice(2) + '/' + m;
+      }
+      return month.slice(5) + '月';
+    };
+    
+    // 選択されたユーザーまたは全員の月別平均体重を計算
+    const targetUsers = selectedYearlyUser === 'all' ? db.users : db.users.filter(u => u.id === selectedYearlyUser);
+    const yearlyDatasets = targetUsers.map((u, idx) => {
+      const monthlyAvg = monthsRange.map(month => {
+        const monthWeights = db.weights.filter(w => w.userId === u.id && w.date.slice(0,7) === month);
+        if (monthWeights.length === 0) return null;
+        const avg = monthWeights.reduce((sum, w) => sum + w.weight, 0) / monthWeights.length;
+        return { x: formatLabel(month), y: parseFloat(avg.toFixed(1)) };
+      }).filter(d => d !== null);
+      
+      const userIdx = db.users.findIndex(user => user.id === u.id);
+      return {
+        label: u.name,
+        data: monthlyAvg,
+        borderColor: USER_COLORS[userIdx % USER_COLORS.length],
+        backgroundColor: 'transparent',
+        tension: 0.3,
+        pointBackgroundColor: USER_COLORS[userIdx % USER_COLORS.length],
+        pointRadius: 5,
+        pointHoverRadius: 7
+      };
+    }).filter(ds => ds.data.length > 0);
+    
+    if (yearlyDatasets.length === 0) {
+      yearlyCanvas.style.display = 'none';
+      yearlyEmpty.style.display = 'block';
+    } else {
+      const yearlyCtx = yearlyCanvas.getContext('2d');
+      dashYearlyWeightChart = new Chart(yearlyCtx, {
+        type: 'line',
+        data: { datasets: yearlyDatasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          aspectRatio: 2.5,
+          plugins: {
+            legend: {
+              display: selectedYearlyUser === 'all' && db.users.length > 1,
+              labels: { color: '#8899A6', font: { size: 11 }, boxWidth: 12 }
+            },
+            datalabels: {
+              display: true,
+              align: 'top',
+              anchor: 'end',
+              color: function(context) {
+                return context.dataset.borderColor;
+              },
+              font: { size: selectedYearlyPeriod === 'all' && monthsRange.length > 15 ? 9 : 11, weight: 'bold' },
+              formatter: function(value) {
+                return value.y + 'kg';
+              }
+            }
+          },
+          scales: {
+            x: {
+              type: 'category',
+              ticks: { color: '#4A6578', font: { size: 10 } },
+              grid: { color: '#1A3044' }
+            },
+            y: {
+              ticks: { color: '#4A6578', font: { size: 10 } },
+              grid: { color: '#1A3044' }
+            }
+          }
+        }
+      });
+    }
+  }
 
   // Weight User Grid
   const wug = document.getElementById('weightUserGrid');
@@ -1487,12 +2602,209 @@ function renderDashboard() {
   }).join('');
 }
 
+
+// ════════════════════════════════════════
+//  CSV IMPORT
+// ════════════════════════════════════════
+let csvParsed = [];
+let csvHeaders = [];
+
+function csvReset() {
+  csvParsed = []; csvHeaders = [];
+  const s1 = document.getElementById('csvStep1');
+  const s2 = document.getElementById('csvStep2');
+  const nb = document.getElementById('csvNextBtn');
+  const ib = document.getElementById('csvImportBtn');
+  if (s1) s1.style.display = 'block';
+  if (s2) s2.style.display = 'none';
+  if (nb) nb.style.display = 'none';
+  if (ib) ib.style.display = 'none';
+  const fi = document.getElementById('csvFileInput');
+  if (fi) fi.value = '';
+}
+
+function populateCsvUserSelect() {
+  const sel = document.getElementById('csv_user');
+  if (sel) sel.innerHTML = db.users.map(u => '<option value="' + u.id + '">' + esc(u.name) + '</option>').join('');
+}
+
+function initCsvDrop() {
+  const zone  = document.getElementById('csvDropZone');
+  const input = document.getElementById('csvFileInput');
+  if (!zone || !input) return;
+  
+  // イベントを一度削除（重複防止）
+  const newZone = zone.cloneNode(true);
+  zone.parentNode.replaceChild(newZone, zone);
+  const newInput = document.getElementById('csvFileInput');
+  
+  newZone.addEventListener('click', () => newInput.click());
+  newZone.addEventListener('dragover', function(e) { 
+    e.preventDefault(); 
+    newZone.style.borderColor = 'var(--accent)'; 
+  });
+  newZone.addEventListener('dragleave', function() { 
+    newZone.style.borderColor = 'var(--border)'; 
+  });
+  newZone.addEventListener('drop', function(e) {
+    e.preventDefault(); 
+    newZone.style.borderColor = 'var(--border)';
+    if (e.dataTransfer.files[0]) csvReadFile(e.dataTransfer.files[0]);
+  });
+  
+  newInput.addEventListener('change', function() {
+    if (this.files[0]) csvReadFile(this.files[0]);
+  });
+}
+
+function csvReadFile(file) {
+  const tryRead = function(encoding, fallback) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const text = e.target.result;
+      if (encoding === 'UTF-8' && text.includes('\uFFFD') && fallback) {
+        tryRead('Shift_JIS', false);
+      } else {
+        csvParse(text);
+      }
+    };
+    reader.readAsText(file, encoding);
+  };
+  tryRead('UTF-8', true);
+}
+
+function csvParse(text) {
+  text = text.replace(/^\uFEFF/, '');
+  const lines = text.split('\n').map(function(l){ return l.replace(/\r$/, ''); }).filter(function(l){ return l.trim() !== ''; });
+  if (lines.length < 2) { alert('データが少なすぎます（最低2行必要）'); return; }
+
+  const delim = lines[0].indexOf('\t') !== -1 ? '\t' : ',';
+  const rows = lines.map(function(l) {
+    return l.split(delim).map(function(c){ return c.trim().replace(/^"|"$/g, ''); });
+  });
+
+  const firstRow = rows[0];
+  const hasHeader = isNaN(parseFloat(firstRow[0])) || firstRow.some(function(c){ return /[^\d.\-\/]/.test(c) && c.length > 0; });
+  csvHeaders = hasHeader ? firstRow : firstRow.map(function(_, i){ return '列' + (i+1); });
+  csvParsed  = (hasHeader ? rows.slice(1) : rows).filter(function(r){ return r.some(function(c){ return c !== ''; }); });
+
+  if (csvParsed.length === 0) { alert('有効なデータが見つかりませんでした'); return; }
+
+  var dateCol = -1, weightCol = -1, fatCol = -1;
+  csvHeaders.forEach(function(h, i) {
+    const lh = h.toLowerCase();
+    if (dateCol === -1 && ['日付','date','日','測定日','計測日','記録日','時刻'].some(function(w){ return lh.indexOf(w) !== -1; })) dateCol = i;
+    if (weightCol === -1 && ['体重','weight','kg'].some(function(w){ return lh.indexOf(w) !== -1; })) weightCol = i;
+    if (fatCol === -1 && ['体脂肪','fat','脂肪'].some(function(w){ return lh.indexOf(w) !== -1; })) fatCol = i;
+  });
+  if (dateCol === -1 && csvHeaders.length >= 1) dateCol = 0;
+  if (weightCol === -1 && csvHeaders.length >= 2) weightCol = 1;
+  if (fatCol === -1 && csvHeaders.length >= 3) fatCol = 2;
+
+  function makeOpts(selected) {
+    var html = '<option value="-1">─ 使用しない ─</option>';
+    csvHeaders.forEach(function(h, i) {
+      var ex = csvParsed[0] ? (csvParsed[0][i] || '') : '';
+      html += '<option value="' + i + '"' + (i === selected ? ' selected' : '') + '>' + h + '（例: ' + ex + '）</option>';
+    });
+    return html;
+  }
+
+  document.getElementById('csv_col_date').innerHTML   = makeOpts(dateCol);
+  document.getElementById('csv_col_weight').innerHTML = makeOpts(weightCol);
+  document.getElementById('csv_col_fat').innerHTML    = makeOpts(fatCol);
+  document.getElementById('csvRowCount').textContent  = csvParsed.length + ' 件のデータを検出';
+
+  ['csv_col_date','csv_col_weight','csv_col_fat'].forEach(function(id) {
+    const el = document.getElementById(id);
+    if (el) { el.removeEventListener('change', csvUpdatePreview); el.addEventListener('change', csvUpdatePreview); }
+  });
+
+  csvUpdatePreview();
+
+  document.getElementById('csvStep1').style.display   = 'none';
+  document.getElementById('csvStep2').style.display   = 'block';
+  document.getElementById('csvImportBtn').style.display = 'inline-block';
+}
+
+function csvNormalizeDate(raw) {
+  if (!raw) return null;
+  raw = raw.trim();
+  var m;
+  m = raw.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+  if (m) return m[1] + '-' + m[2].padStart(2,'0') + '-' + m[3].padStart(2,'0');
+  m = raw.match(/^(\d{1,2})[\/\-](\d{1,2})$/);
+  if (m) return new Date().getFullYear() + '-' + m[1].padStart(2,'0') + '-' + m[2].padStart(2,'0');
+  m = raw.match(/^(\d{4})(\d{2})(\d{2})$/);
+  if (m) return m[1] + '-' + m[2] + '-' + m[3];
+  return null;
+}
+
+function csvUpdatePreview() {
+  const dc = parseInt(document.getElementById('csv_col_date').value);
+  const wc = parseInt(document.getElementById('csv_col_weight').value);
+  const fc = parseInt(document.getElementById('csv_col_fat').value);
+
+  const preview = csvParsed.slice(0, 3).map(function(row) {
+    const d = dc >= 0 ? (csvNormalizeDate(row[dc]) || row[dc]) : '?';
+    const w = wc >= 0 ? row[wc] : '?';
+    const f = fc >= 0 ? row[fc] : '-';
+    return d + '  体重: ' + w + 'kg  体脂肪: ' + f + '%';
+  }).join('\n');
+  document.getElementById('csvPreview').textContent = preview;
+
+  const valid = csvParsed.filter(function(row) {
+    const d = dc >= 0 ? csvNormalizeDate(row[dc]) : null;
+    const w = wc >= 0 ? parseFloat(row[wc]) : null;
+    return d && w && !isNaN(w);
+  }).length;
+  document.getElementById('csvImportInfo').textContent =
+    '✅ インポート可能: ' + valid + ' 件 / 全 ' + csvParsed.length + ' 件';
+}
+
+function csvNext() {}
+
+async function csvImport() {
+  const userId = document.getElementById('csv_user').value;
+  if (!userId) { alert('ユーザーを選択してください'); return; }
+  const dc = parseInt(document.getElementById('csv_col_date').value);
+  const wc = parseInt(document.getElementById('csv_col_weight').value);
+  const fc = parseInt(document.getElementById('csv_col_fat').value);
+  if (wc < 0) { alert('体重の列を指定してください'); return; }
+  if (dc < 0) { alert('日付の列を指定してください'); return; }
+
+  const inserts = [];
+  let skipped = 0;
+  csvParsed.forEach(function(row) {
+    const dateStr = csvNormalizeDate(row[dc]);
+    const weight  = parseFloat(row[wc]);
+    if (!dateStr || isNaN(weight) || weight <= 0) { skipped++; return; }
+    const fat = fc >= 0 ? parseFloat(row[fc]) || null : null;
+    // 重複チェック（既存DBと照合）
+    const dup = db.weights.find(function(w) {
+      return w.userId === userId && w.date === dateStr && w.weight === weight;
+    });
+    if (dup) { skipped++; return; }
+    inserts.push({ owner_id: currentUser.id, user_id: userId, weight: weight, date: dateStr, fat: fat, memo: 'CSVインポート' });
+  });
+
+  try {
+    if (inserts.length > 0) {
+      await sbFetch('weights', 'POST', inserts);
+    }
+    await loadAllData();
+    closeModal('modalCsvImport');
+    csvReset();
+    updateAll();
+    showToast('✅ ' + inserts.length + ' 件インポート完了' + (skipped ? '（' + skipped + ' 件スキップ）' : ''));
+  } catch(e) { alert('インポートエラー: ' + e.message); }
+}
+
 // ════════════════════════════════════════
 //  UPDATE ALL
 // ════════════════════════════════════════
 function updateAll() {
   const hasUsers = db.users.length > 0;
-  // header buttons
   document.getElementById('btnAddTraining').disabled  = !hasUsers;
   document.getElementById('btnAddWeight').disabled    = !hasUsers;
   document.getElementById('btnAddTraining2').disabled = !hasUsers;
@@ -1740,113 +3052,57 @@ document.querySelectorAll('[onclick*="modalWeight"]').forEach(btn => {
 });
 
 // ════════════════════════════════════════
+//  DRAWER & TAB
+// ════════════════════════════════════════
+function toggleDrawer() {
+  const drawer  = document.getElementById('drawer');
+  const overlay = document.getElementById('drawerOverlay');
+  const btn     = document.getElementById('hamburgerBtn');
+  if (drawer.classList.contains('open')) { closeDrawer(); }
+  else {
+    drawer.classList.add('open');
+    overlay.classList.add('open');
+    btn.classList.add('open');
+  }
+}
+function closeDrawer() {
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('drawerOverlay').classList.remove('open');
+  document.getElementById('hamburgerBtn').classList.remove('open');
+}
+function switchTab(btn) {
+  document.querySelectorAll('.drawer-nav-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const tab = btn.dataset.tab;
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('sec-' + tab).classList.add('active');
+  if (tab === 'dashboard') renderDashboard();
+  closeDrawer();
+}
+
+// ════════════════════════════════════════
 //  INIT
 // ════════════════════════════════════════
 dpInit('dp_t', today());
 dpInit('dp_w', today());
-updateAll();
+
+// 初回ロード：既存セッションがあればデータを取得して表示
+(async () => {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session && session.user) {
+    currentUser = session.user;
+    accessToken = session.access_token;
+    _lastUserId = session.user.id;
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('appScreen').style.display   = 'block';
+    await loadAllData();
+    updateAll();
+  } else {
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('appScreen').style.display   = 'none';
+  }
+})();
 </script>
-
-
-<!-- Edit Weight Modal -->
-<div class="overlay" id="modalEditWeight" onclick="overlayClose(event, 'modalEditWeight')">
-  <div class="modal">
-    <div class="modal-title" style="color:var(--gold);">✏️ 体重記録 編集</div>
-    <input type="hidden" id="ew_id">
-    <div class="field">
-      <label>ユーザー</label>
-      <div id="ew_username" style="padding:10px 13px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--muted);"></div>
-    </div>
-    <div class="row2">
-      <div class="field">
-        <label>体重 (kg) <span class="req">*</span></label>
-        <input type="number" id="ew_weight" placeholder="70.5" step="0.1">
-      </div>
-      <div class="field">
-        <label>体脂肪率 (%)</label>
-        <input type="number" id="ew_fat" placeholder="18.5" step="0.1">
-      </div>
-    </div>
-    <div class="field">
-      <label>計測日 <span class="req">*</span></label>
-      <div class="datepicker-wrap" id="dp_ew_wrap">
-        <div class="datepicker-input" id="dp_ew_display" onclick="dpToggle('dp_ew')">日付を選択</div>
-        <span class="datepicker-icon">📅</span>
-        <input type="hidden" id="ew_date">
-      </div>
-    </div>
-    <div class="field">
-      <label>メモ</label>
-      <input type="text" id="ew_memo" placeholder="体調など">
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal('modalEditWeight')">キャンセル</button>
-      <button class="btn btn-primary" onclick="updateWeight()">保存</button>
-    </div>
-  </div>
-</div>
-
-<!-- Edit Training Modal -->
-<div class="overlay" id="modalEditTraining" onclick="overlayClose(event, 'modalEditTraining')">
-  <div class="modal">
-    <div class="modal-title" style="color:var(--gold);">✏️ トレーニング 編集</div>
-    <input type="hidden" id="et_id">
-    <div class="field">
-      <label>ユーザー</label>
-      <div id="et_username" style="padding:10px 13px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--muted);"></div>
-    </div>
-    <div class="field">
-      <label>種別 <span class="req">*</span></label>
-      <select id="et_type"></select>
-    </div>
-    <div class="field">
-      <label>場所・施設名</label>
-      <input type="text" id="et_location" placeholder="例：ゴールドジム渋谷">
-    </div>
-    <div class="field">
-      <label>住所・エリア</label>
-      <input type="text" id="et_address" placeholder="例：東京都渋谷区">
-    </div>
-    <div class="row2">
-      <div class="field">
-        <label>日付 <span class="req">*</span></label>
-        <div class="datepicker-wrap" id="dp_et_wrap">
-          <div class="datepicker-input" id="dp_et_display" onclick="dpToggle('dp_et')">日付を選択</div>
-          <span class="datepicker-icon">📅</span>
-          <input type="hidden" id="et_date">
-        </div>
-      </div>
-      <div class="field">
-        <label>時間 (分)</label>
-        <input type="number" id="et_duration" placeholder="60">
-      </div>
-    </div>
-    <div class="row2">
-      <div class="field">
-        <label>消費カロリー (kcal)</label>
-        <input type="number" id="et_cal" placeholder="300">
-      </div>
-      <div class="field">
-        <label>トレーニング後体重 (kg)</label>
-        <input type="number" id="et_weight" placeholder="70.5" step="0.1">
-      </div>
-    </div>
-    <div class="field">
-      <label>メモ</label>
-      <textarea id="et_memo" placeholder="メモ…"></textarea>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal('modalEditTraining')">キャンセル</button>
-      <button class="btn btn-primary" onclick="updateTraining()">保存</button>
-    </div>
-  </div>
-</div>
-
-<!-- ── カレンダーポータル（body直下、z-index最上位） ── -->
-<div class="datepicker-cal" id="dp_t_cal"></div>
-<div class="datepicker-cal" id="dp_w_cal"></div>
-<div class="datepicker-cal" id="dp_ew_cal"></div>
-<div class="datepicker-cal" id="dp_et_cal"></div>
-
+</div><!-- /appScreen -->
 </body>
 </html>
